@@ -268,7 +268,10 @@ function findUnsafeUrlReference(value: string): string | null {
 }
 
 function findScriptableProtocol(value: string): string | null {
-  const normalized = value.replace(/[\u0000-\u0020\u007f-\u009f]/g, '');
+  const normalized = Array.from(value, (character) => {
+    const code = character.charCodeAt(0);
+    return code <= 0x20 || (code >= 0x7f && code <= 0x9f) ? '' : character;
+  }).join('');
   const match = normalized.match(/(?:java|vb)script:/i);
   return match ? match[0] : null;
 }

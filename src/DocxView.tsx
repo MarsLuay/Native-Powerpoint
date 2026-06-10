@@ -4,7 +4,7 @@ import { createEditorTranslator } from './editorTranslations';
 import { loadDocxEditorChunk } from './docxEditorLoader';
 import { findHiddenDocxText, type HiddenTextFinding } from './docxHiddenTextScanner';
 import { extractDocxText } from './docxTextExtractor';
-import { isHTMLElement } from './domGuards';
+import { isElement, isHTMLElement, isNode } from './domGuards';
 import { debugLog, errorLog, infoLog, warnLog } from './logger';
 import { DOCXIDIAN_LANGUAGE_OPTIONS, DEFAULT_LANGUAGE, normalizeDocxidianLanguage, type DocxidianLanguage } from './locales';
 import { DEFAULT_SETTINGS, normalizeDefaultZoom } from './settings';
@@ -767,7 +767,7 @@ function getEditorMenuLabels(locale: Translations | undefined) {
 }
 
 function shouldHandleEditorSaveClick(target: EventTarget | null, saveLabels: string[]) {
-	if (!(target instanceof Element)) {
+	if (!isElement(target)) {
 		return false;
 	}
 
@@ -2193,7 +2193,7 @@ export class DocxView extends FileView {
 		addAction('Paste without formatting', false);
 
 		const handleOutsidePointer = (evt: MouseEvent) => {
-			if (evt.target instanceof Node && !popoverEl.contains(evt.target) && !anchorEl.contains(evt.target)) {
+					if (isNode(evt.target) && !popoverEl.contains(evt.target) && !anchorEl.contains(evt.target)) {
 				this.closeEditorEditMenu();
 			}
 		};
@@ -2400,7 +2400,7 @@ export class DocxView extends FileView {
 				}
 			};
 			const handleOutsidePointer = (evt: MouseEvent) => {
-				if (evt.target instanceof Node && !popoverEl.contains(evt.target) && !anchorEl.contains(evt.target)) {
+				if (isNode(evt.target) && !popoverEl.contains(evt.target) && !anchorEl.contains(evt.target)) {
 					this.closeEditorOptionSearchMenu();
 				}
 			};
@@ -2523,7 +2523,7 @@ export class DocxView extends FileView {
 			this.renderEditorSettingsMenu(popoverEl);
 
 			const handleOutsidePointer = (evt: MouseEvent) => {
-				if (evt.target instanceof Node && !popoverEl.contains(evt.target) && !anchorEl.contains(evt.target)) {
+				if (isNode(evt.target) && !popoverEl.contains(evt.target) && !anchorEl.contains(evt.target)) {
 					this.closeEditorSettingsMenu();
 				}
 			};
@@ -3042,12 +3042,12 @@ export class DocxView extends FileView {
 
 	private registerEditorSaveInterceptor() {
 		this.registerDomEvent(activeDocument, 'click', (evt) => {
-			if (
-				!this.hostEl
-				|| this.app.workspace.getActiveViewOfType(DocxView) !== this
-				|| (evt.target instanceof Element && !!evt.target.closest('.modal'))
-				|| !shouldHandleEditorSaveClick(evt.target, getEditorMenuLabels(this.getEditorLocale()).save)
-			) {
+				if (
+					!this.hostEl
+					|| this.app.workspace.getActiveViewOfType(DocxView) !== this
+					|| (isElement(evt.target) && !!evt.target.closest('.modal'))
+					|| !shouldHandleEditorSaveClick(evt.target, getEditorMenuLabels(this.getEditorLocale()).save)
+				) {
 				return;
 			}
 
@@ -3063,8 +3063,8 @@ export class DocxView extends FileView {
 				return;
 			}
 
-			const targetInsideHost = evt.target instanceof Node && this.hostEl.contains(evt.target);
-			const activeInsideHost = activeDocument.activeElement instanceof Node && this.hostEl.contains(activeDocument.activeElement);
+				const targetInsideHost = isNode(evt.target) && this.hostEl.contains(evt.target);
+				const activeInsideHost = isNode(activeDocument.activeElement) && this.hostEl.contains(activeDocument.activeElement);
 			const selection = activeDocument.getSelection();
 			const selectionInsideHost = Boolean(
 				selection
@@ -3090,12 +3090,12 @@ export class DocxView extends FileView {
 	private registerSaveShortcut() {
 		this.registerDomEvent(activeDocument, 'keydown', (evt) => {
 			if (
-				!this.hostEl
-				|| evt.key.toLowerCase() !== 's'
-				|| (!evt.metaKey && !evt.ctrlKey)
-				|| !(activeDocument.activeElement instanceof Node)
-				|| !this.hostEl.contains(activeDocument.activeElement)
-			) {
+					!this.hostEl
+					|| evt.key.toLowerCase() !== 's'
+					|| (!evt.metaKey && !evt.ctrlKey)
+					|| !isNode(activeDocument.activeElement)
+					|| !this.hostEl.contains(activeDocument.activeElement)
+				) {
 				return;
 			}
 
@@ -3111,7 +3111,7 @@ export class DocxView extends FileView {
 				return;
 			}
 
-			const target = evt.target instanceof Element ? evt.target : null;
+				const target = isElement(evt.target) ? evt.target : null;
 			if (target?.closest('.modal') && !target.closest('.docxidian-find-dialog')) {
 				return;
 			}
@@ -3130,24 +3130,19 @@ export class DocxView extends FileView {
 			return true;
 		}
 
-		const workspace = this.app.workspace as typeof this.app.workspace & { activeLeaf?: WorkspaceLeaf | null };
-		if (workspace.activeLeaf === this.leaf) {
-			return true;
-		}
-
-		if (this.contentEl.closest('.workspace-leaf.mod-active')) {
-			return true;
-		}
+			if (this.contentEl.closest('.workspace-leaf.mod-active')) {
+				return true;
+			}
 
 			const activeElement = activeDocument.activeElement;
-		return Boolean(activeElement instanceof Node && this.hostEl?.contains(activeElement));
-	}
+			return Boolean(isNode(activeElement) && this.hostEl?.contains(activeElement));
+		}
 
-	private registerEditorDropdownScrollGuard() {
-		const keepEditorListboxOpen = (evt: Event) => {
-			if (!this.hostEl || this.app.workspace.getActiveViewOfType(DocxView) !== this || !(evt.target instanceof Element)) {
-				return;
-			}
+		private registerEditorDropdownScrollGuard() {
+			const keepEditorListboxOpen = (evt: Event) => {
+				if (!this.hostEl || this.app.workspace.getActiveViewOfType(DocxView) !== this || !isElement(evt.target)) {
+					return;
+				}
 
 			const listbox = evt.target.closest('[role="listbox"]');
 			if (listbox && this.hostEl.contains(listbox)) {

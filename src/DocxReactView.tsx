@@ -10,6 +10,7 @@ import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 import { Decoration, DecorationSet, type EditorView } from 'prosemirror-view';
 import editorStyles from '@eigenpal/docx-editor-react/styles.css';
 import { createEditorTranslator } from './editorTranslations';
+import { isClipboardEvent, isElement, isHTMLButtonElement, isInputEvent, isNode } from './domGuards';
 import { debugLog, errorLog, warnLog } from './logger';
 import { Notice, Platform, setIcon } from './obsidianRuntime';
 import { exportRenderedPagesToPdf } from './renderedPdfExport';
@@ -25,7 +26,7 @@ interface DocxSectionProperties {
 
 interface DocxDocumentWithSectionProperties {
 	package?: {
-		document?: {
+		[DOCX_PACKAGE_DOCUMENT_KEY]?: {
 			finalSectionProperties?: DocxSectionProperties;
 			sections?: Array<{
 				properties?: DocxSectionProperties;
@@ -36,6 +37,7 @@ interface DocxDocumentWithSectionProperties {
 
 const DEFAULT_PAGE_HEIGHT_TWIPS = 15840;
 const DEFAULT_MARGIN_TWIPS = 1440;
+const DOCX_PACKAGE_DOCUMENT_KEY = 'document';
 const MIN_TOUCH_ZOOM = 0.25;
 const MAX_TOUCH_ZOOM = 4;
 const TOUCH_ZOOM_SENSITIVITY = 0.55;
@@ -122,6 +124,10 @@ interface FindHighlightState {
 	currentIndex: number;
 }
 
+interface ObsidianDesktopWindow extends Window {
+	require?: (moduleId: string) => unknown;
+}
+
 interface PinchZoomState {
 	source: 'touch' | 'gesture' | 'pointer';
 	startDistance: number;
@@ -185,6 +191,15 @@ function createFindReplaceLabels(i18n: Translations | undefined): FindReplaceLab
 
 const findHighlightPluginKey = new PluginKey<FindHighlightState>('docxidian-find-highlight');
 const preserveTypedSpacePluginKey = new PluginKey('docxidian-preserve-typed-space');
+
+function isFindHighlightState(value: unknown): value is FindHighlightState {
+	if (!value || typeof value !== 'object') {
+		return false;
+	}
+
+	const state = value as Partial<FindHighlightState>;
+	return Array.isArray(state.matches) && typeof state.currentIndex === 'number';
+}
 
 function insertPlainTypedText(view: EditorView, text: string, from = view.state.selection.from, to = view.state.selection.to) {
 	view.dispatch(view.state.tr.insertText(text, from, to).scrollIntoView());
@@ -308,7 +323,7 @@ function updateFontSizeControlDisplay(control: HTMLElement | null, value: number
 }
 
 function getFontSizeStepTarget(target: EventTarget | null) {
-	if (!(target instanceof Element)) {
+	if (!isElement(target)) {
 		return null;
 	}
 
@@ -322,7 +337,7 @@ function getFontSizeStepTarget(target: EventTarget | null) {
 }
 
 function getToolbarTooltipTarget(target: EventTarget | null, editorRoot: HTMLElement | null) {
-	if (!(target instanceof Element) || !editorRoot) {
+	if (!isElement(target) || !editorRoot) {
 		return null;
 	}
 
@@ -543,7 +558,7 @@ const preserveTypedSpacePlugin = new Plugin({
 	props: {
 		handleDOMEvents: {
 			beforeinput(view, event) {
-				if (!(event instanceof InputEvent)) {
+				if (!isInputEvent(event)) {
 					return false;
 				}
 
@@ -556,7 +571,7 @@ const preserveTypedSpacePlugin = new Plugin({
 				return insertPlainTypedText(view, text);
 			},
 			paste(view, event) {
-				if (!(event instanceof ClipboardEvent)) {
+				if (!isClipboardEvent(event)) {
 					return false;
 				}
 
@@ -813,55 +828,6 @@ function getRenderedListMarkerText(marker: HTMLElement) {
 	return generatedContentText.trim().length > 0 ? generatedContentText : '';
 }
 
-function rangeIntersectsNode(range: Range, node: Node) {
-	try {
-		return range.intersectsNode(node);
-	} catch {
-		return false;
-	}
-}
-
-function getSelectedRenderedListMarkers(root: HTMLElement) {
-	const selectedMarkers = new Map<number, string>();
-	const browserSelection = window.getSelection();
-	if (!browserSelection || browserSelection.rangeCount === 0) {
-		return selectedMarkers;
-	}
-
-	const ranges: Range[] = [];
-	for (let index = 0; index < browserSelection.rangeCount; index += 1) {
-		ranges.push(browserSelection.getRangeAt(index));
-	}
-
-	root.querySelectorAll<HTMLElement>(LIST_PARAGRAPH_SELECTOR).forEach((paragraph) => {
-		const marker = paragraph.querySelector<HTMLElement>(LIST_MARKER_SELECTOR);
-		if (!marker) {
-			return;
-		}
-
-		const markerText = getRenderedListMarkerText(marker);
-		if (markerText.length === 0) {
-			return;
-		}
-
-		const markerSelected = marker.classList.contains(SELECTED_LIST_MARKER_CLASS)
-			|| ranges.some((range) => rangeIntersectsNode(range, marker));
-		if (!markerSelected) {
-			return;
-		}
-
-		const paragraphStart = Number(paragraph.dataset.pmStart);
-		if (!Number.isFinite(paragraphStart)) {
-			return;
-		}
-
-		selectedMarkers.set(paragraphStart, markerText);
-		selectedMarkers.set(paragraphStart + 1, markerText);
-	});
-
-	return selectedMarkers;
-}
-
 function updateListMarkerSelectionHighlights(root: HTMLElement, view: EditorView) {
 	clearListMarkerSelectionHighlights(root);
 
@@ -938,11 +904,12 @@ interface ElectronClipboard {
 
 function getElectronClipboard() {
 	try {
-		if (typeof require !== 'function') {
+		const runtimeRequire = (window as ObsidianDesktopWindow).require;
+		if (typeof runtimeRequire !== 'function') {
 			return null;
 		}
 
-		const electron = require('electron') as {
+		const electron = runtimeRequire('electron') as {
 			clipboard?: ElectronClipboard;
 		};
 		return electron.clipboard ?? null;
@@ -1182,7 +1149,11 @@ const FindReplaceDialog = ({
 					onKeyDown={(evt) => {
 						if (evt.key === 'Enter') {
 							evt.preventDefault();
-							evt.shiftKey ? onPrevious() : onNext();
+							if (evt.shiftKey) {
+								onPrevious();
+							} else {
+								onNext();
+							}
 						}
 					}}
 				/>
@@ -1378,7 +1349,10 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		key: findHighlightPluginKey,
 		state: {
 			init: () => ({ matches: [], currentIndex: 0 }),
-			apply: (transaction, previous) => transaction.getMeta(findHighlightPluginKey) ?? previous,
+			apply: (transaction, previous) => {
+				const nextState = transaction.getMeta(findHighlightPluginKey);
+				return isFindHighlightState(nextState) ? nextState : previous;
+			},
 		},
 		props: {
 			decorations: (state) => {
@@ -1531,7 +1505,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			if (
 				!editorRoot
 				|| (!isFindShortcut && !isReplaceShortcut)
-				|| !(evt.target instanceof Node)
+				|| !isNode(evt.target)
 				|| (!editorRoot.contains(evt.target) && !activeDocument.querySelector('.docxidian-find-dialog')?.contains(evt.target))
 			) {
 				return;
@@ -1652,12 +1626,12 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	useEffect(() => {
 		const handleModePointerDown = (evt: PointerEvent) => {
 			const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
-			if (!editorRoot || !(evt.target instanceof Element)) {
+			if (!editorRoot || !isElement(evt.target)) {
 				return;
 			}
 
 			const button = evt.target.closest('button');
-			if (!(button instanceof HTMLButtonElement)) {
+			if (!isHTMLButtonElement(button)) {
 				return;
 			}
 
@@ -1694,7 +1668,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			return;
 		}
 
-		const documentProperties = docxDocument.package?.document;
+		const documentProperties = docxDocument.package?.[DOCX_PACKAGE_DOCUMENT_KEY];
 		const sectionProperties = {
 			...documentProperties?.sections?.[0]?.properties,
 			...documentProperties?.finalSectionProperties,
@@ -1720,7 +1694,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		}
 	}, [showRuler]);
 
-	const scheduleVerticalRulerMarkerSync = useCallback((document: DocxDocumentWithSectionProperties | null | undefined) => {
+	const scheduleVerticalRulerMarkerSync = useCallback((sourceDocument: DocxDocumentWithSectionProperties | null | undefined) => {
 		if (rulerSyncFrameRef.current !== null) {
 			window.cancelAnimationFrame(rulerSyncFrameRef.current);
 		}
@@ -1730,12 +1704,12 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 
 		rulerSyncFrameRef.current = window.requestAnimationFrame(() => {
 			rulerSyncFrameRef.current = null;
-			syncVerticalRulerMarkers(document);
-			window.requestAnimationFrame(() => syncVerticalRulerMarkers(document));
+			syncVerticalRulerMarkers(sourceDocument);
+			window.requestAnimationFrame(() => syncVerticalRulerMarkers(sourceDocument));
 		});
 		rulerSyncTimeoutRef.current = window.setTimeout(() => {
 			rulerSyncTimeoutRef.current = null;
-			syncVerticalRulerMarkers(document);
+			syncVerticalRulerMarkers(sourceDocument);
 		}, 50);
 	}, [syncVerticalRulerMarkers]);
 
@@ -1805,7 +1779,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		editorRoot.addClass('docxidian-touch-pinch-root');
 		hostRoot.addClass('docxidian-touch-pinch-root');
 
-		const isEditorTarget = (target: EventTarget | null) => target instanceof Node && hostRoot.contains(target);
+		const isEditorTarget = (target: EventTarget | null) => isNode(target) && hostRoot.contains(target);
 
 		const shouldIgnoreGestureSource = (source: PinchZoomState['source']) => {
 			const activeSource = pinchZoomStateRef.current?.source;
@@ -2114,7 +2088,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			new Notice(`Could not save ${file.name}: ${message}`);
 			return false;
 		} finally {
-			setTimeout(() => {
+			window.setTimeout(() => {
 				isSavingRef.current = false;
 			}, 300);
 		}
@@ -2238,15 +2212,17 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 
 	const scheduleRename = useCallback((name: string) => {
 		clearRenameTimeout();
-		renameTimeoutRef.current = window.setTimeout(async () => {
+		renameTimeoutRef.current = window.setTimeout(() => {
 			renameTimeoutRef.current = null;
-			try {
-				await onDocumentNameChange(name);
-			} catch (renameError) {
-				const message = renameError instanceof Error ? renameError.message : 'Unknown rename error';
-				new Notice(`Could not rename ${file?.name ?? 'document'}: ${message}`);
-				setDocumentName(file?.name ?? '');
-			}
+			void (async () => {
+				try {
+					await onDocumentNameChange(name);
+				} catch (renameError) {
+					const message = renameError instanceof Error ? renameError.message : 'Unknown rename error';
+					new Notice(`Could not rename ${file?.name ?? 'document'}: ${message}`);
+					setDocumentName(file?.name ?? '');
+				}
+			})();
 		}, 700);
 	}, [clearRenameTimeout, file, onDocumentNameChange]);
 
@@ -2621,7 +2597,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		};
 
 		const handlePointerOut = (evt: PointerEvent) => {
-			if (!activeTarget || evt.relatedTarget instanceof Node && activeTarget.contains(evt.relatedTarget)) {
+			if (!activeTarget || (isNode(evt.relatedTarget) && activeTarget.contains(evt.relatedTarget))) {
 				return;
 			}
 

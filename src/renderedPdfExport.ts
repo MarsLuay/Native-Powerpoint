@@ -1,4 +1,5 @@
 import { debugLog, infoLog, warnLog } from './logger';
+import { isText } from './domGuards';
 
 const RENDERED_PDF_EXPORT_SCALE = 2;
 const RENDERED_PDF_PAGE_READY_TIMEOUT_MS = 4000;
@@ -425,7 +426,7 @@ function collectRenderedSpanPdfRuns(page: HTMLElement, pageRect: DOMRect, pdfWid
 		}
 
 		const textNode = span.firstChild;
-		if (textNode instanceof Text) {
+		if (isText(textNode)) {
 			const wholeTextRuns = collectWholeTextNodePdfRun(textNode, page, pageRect, pdfWidth, pdfHeight);
 			runs.push(...(wholeTextRuns.length > 0 ? wholeTextRuns : collectTextNodePdfRuns(textNode, page, pageRect, pdfWidth, pdfHeight)));
 			return;
@@ -484,8 +485,8 @@ function collectRenderedPdfTextRuns(page: HTMLElement, pdfWidth: number, pdfHeig
 		let node = walker.nextNode();
 
 		while (node && runs.length < RENDERED_PDF_MAX_TEXT_RUNS_PER_PAGE) {
-			if (node instanceof Text) {
-				runs.push(...collectTextNodePdfRuns(node, page, pageRect, pdfWidth, pdfHeight));
+				if (isText(node)) {
+					runs.push(...collectTextNodePdfRuns(node, page, pageRect, pdfWidth, pdfHeight));
 			}
 			node = walker.nextNode();
 		}

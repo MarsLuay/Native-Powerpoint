@@ -72,7 +72,7 @@ export default class DocxidianPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'copy-docxidian-debug-log',
-			name: 'Copy Native PowerPoint Doc Editor debug log',
+			name: 'Copy debug log',
 			callback: async () => {
 				await this.copyDebugLog();
 			},

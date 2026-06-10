@@ -10,18 +10,13 @@ export interface DocxidianLogEntry {
 
 const MAX_LOG_ENTRIES = 200;
 const LOG_PREFIX = '[Native PowerPoint Doc Editor]';
-const LOG_STATE_KEY = '__nativePowerPointDocEditorLogState';
 
 interface DocxidianLogState {
 	debugLoggingEnabled: boolean;
 	entries: DocxidianLogEntry[];
 }
 
-function getGlobalLogHost() {
-	return globalThis as typeof globalThis & {
-		[LOG_STATE_KEY]?: DocxidianLogState;
-	};
-}
+let logState: DocxidianLogState | null = null;
 
 function getWindowWithLogs() {
 	if (typeof window === 'undefined') {
@@ -35,16 +30,15 @@ function getWindowWithLogs() {
 }
 
 function getLogState() {
-	const host = getGlobalLogHost();
-	if (!host[LOG_STATE_KEY]) {
+	if (!logState) {
 		const logsWindow = getWindowWithLogs();
-		host[LOG_STATE_KEY] = {
+		logState = {
 			debugLoggingEnabled: logsWindow?.docxidianDebugLogging === true,
 			entries: Array.isArray(logsWindow?.docxidianDebugLogs) ? logsWindow.docxidianDebugLogs : [],
 		};
 	}
 
-	return host[LOG_STATE_KEY];
+	return logState;
 }
 
 function syncWindowLogState() {

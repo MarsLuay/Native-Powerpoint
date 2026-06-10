@@ -17,14 +17,14 @@ interface ObsidianRuntime {
 	setIcon?: (parent: HTMLElement, iconId: string) => void;
 }
 
-const RUNTIME_KEY = '__docxidianObsidianRuntime';
+let configuredRuntime: ObsidianRuntime | null = null;
 
 function getRuntime(): ObsidianRuntime {
-	return (globalThis as typeof globalThis & { [RUNTIME_KEY]?: ObsidianRuntime })[RUNTIME_KEY] ?? {};
+	return configuredRuntime ?? {};
 }
 
 export function configureObsidianRuntime(runtime: ObsidianRuntime): void {
-	(globalThis as typeof globalThis & { [RUNTIME_KEY]?: ObsidianRuntime })[RUNTIME_KEY] = runtime;
+	configuredRuntime = runtime;
 }
 
 export class Notice {

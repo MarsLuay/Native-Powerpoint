@@ -92,6 +92,10 @@ export class DocxidianSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		this.renderSettings();
+	}
+
+	private renderSettings(): void {
 		const { containerEl } = this;
 		const selectedLanguage = normalizeDocxidianLanguage(this.plugin.settings.editorLanguage);
 		const selectedZoom = normalizeDefaultZoom(this.plugin.settings.defaultZoom);
@@ -120,7 +124,7 @@ export class DocxidianSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.authorName = DEFAULT_SETTINGS.authorName;
 					await this.plugin.saveSettings();
-					this.display();
+					this.renderSettings();
 				}));
 
 		new Setting(containerEl)
@@ -176,7 +180,7 @@ export class DocxidianSettingTab extends PluginSettingTab {
 					this.plugin.settings.editorLanguage = DEFAULT_LANGUAGE;
 					await this.plugin.saveSettings();
 					this.plugin.refreshDocxViews();
-					this.display();
+					this.renderSettings();
 				}));
 
 		new Setting(containerEl)
@@ -214,7 +218,7 @@ export class DocxidianSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					this.plugin.settings.defaultZoom = DEFAULT_SETTINGS.defaultZoom;
 					await this.plugin.saveSettings();
-					this.display();
+					this.renderSettings();
 				}));
 
 		new Setting(containerEl)

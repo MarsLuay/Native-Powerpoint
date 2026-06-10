@@ -1,4 +1,4 @@
-type ImmediateHandle = ReturnType<typeof setTimeout>;
+type ImmediateHandle = number;
 type ImmediateCallback = (...args: unknown[]) => void;
 
 interface ImmediateTarget {
@@ -6,16 +6,16 @@ interface ImmediateTarget {
 	clearImmediate?: (handle: ImmediateHandle) => void;
 }
 
-const target = globalThis as unknown as ImmediateTarget;
+const target = window as unknown as ImmediateTarget;
 
 if (typeof target.setImmediate !== 'function') {
 	target.setImmediate = (callback: ImmediateCallback, ...args: unknown[]) => {
-		return setTimeout(() => {
+		return window.setTimeout(() => {
 			callback(...args);
 		}, 0);
 	};
 }
 
 if (typeof target.clearImmediate !== 'function') {
-	target.clearImmediate = (handle) => clearTimeout(handle);
+	target.clearImmediate = (handle) => window.clearTimeout(handle);
 }

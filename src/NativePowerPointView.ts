@@ -20,6 +20,7 @@ import type { ShapeTransform } from 'pptx-svg';
 import type { ChartDataGrid, ChartDataUpdate } from './ChartData';
 import type { FontSubstitution } from './FontFidelity';
 import type { SlideObjectClipboard } from './ShapeClipboard';
+import { isElement, isNode, isSVGGElement, isSVGTextElement, isSVGTSpanElement } from './domGuards';
 
 export const NATIVE_POWERPOINT_VIEW_TYPE = 'native-powerpoint-view';
 
@@ -77,6 +78,13 @@ interface InlineCaretRow {
   top: number;
   height: number;
   centerRatio: number;
+}
+
+interface SvgRectLike {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface SvgInlineCaretGeometry {
@@ -946,7 +954,7 @@ export class NativePowerPointView extends FileView {
       if (!this.containerEl.isShown()) return;
 
       if (isPrimaryFindShortcut(event) && this.isActivePowerPointView()) {
-        const target = event.target instanceof Element ? event.target : null;
+        const target = isElement(event.target) ? event.target : null;
         if (!target?.closest('.modal')) {
           event.preventDefault();
           event.stopImmediatePropagation();
@@ -958,7 +966,7 @@ export class NativePowerPointView extends FileView {
       if (!this.isActivePowerPointView()) return;
       if (this.activeEditor && activeDocument.activeElement === this.activeEditor) return;
 
-      const target = event.target instanceof Element ? event.target : null;
+      const target = isElement(event.target) ? event.target : null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
           event.preventDefault();
@@ -1044,17 +1052,12 @@ export class NativePowerPointView extends FileView {
       return true;
     }
 
-    const workspace = this.app.workspace as typeof this.app.workspace & { activeLeaf?: WorkspaceLeaf | null };
-    if (workspace.activeLeaf === this.leaf) {
-      return true;
-    }
-
     if (this.contentEl.closest('.workspace-leaf.mod-active')) {
       return true;
     }
 
     const activeElement = activeDocument.activeElement;
-    return Boolean(activeElement instanceof Node && this.contentEl.contains(activeElement));
+    return Boolean(isNode(activeElement) && this.contentEl.contains(activeElement));
   }
 
   private async loadPresentation(file: TFile): Promise<void> {
@@ -1311,7 +1314,7 @@ export class NativePowerPointView extends FileView {
     if (!this.svgEl) return;
 
     this.svgEl.addEventListener('click', (event) => {
-      const target = event.target instanceof Element ? event.target : null;
+      const target = isElement(event.target) ? event.target : null;
       if (this.suppressNextTextClick && target?.closest('text')) {
         event.preventDefault();
         event.stopPropagation();
@@ -1349,7 +1352,7 @@ export class NativePowerPointView extends FileView {
     });
 
     this.svgEl.addEventListener('dblclick', (event) => {
-      const target = event.target instanceof Element ? event.target : null;
+      const target = isElement(event.target) ? event.target : null;
       const shape = target?.closest('g[data-ooxml-shape-idx]') ?? null;
       const shapeIndex = getShapeIndex(shape);
       if (shapeIndex !== null) {
@@ -1375,7 +1378,7 @@ export class NativePowerPointView extends FileView {
     this.svgEl.addEventListener('pointerdown', (event) => {
       if (event.button !== 0) return;
 
-      const target = event.target instanceof Element ? event.target : null;
+      const target = isElement(event.target) ? event.target : null;
       if (target?.closest('text')) {
         this.handleInlineTextPointerDown(event, target);
         return;
@@ -1600,7 +1603,7 @@ export class NativePowerPointView extends FileView {
     });
 
     const selected = this.svgEl.querySelector(`g[data-ooxml-shape-idx="${shapeIndex}"]`);
-    if (!(selected instanceof SVGGElement)) return;
+    if (!isSVGGElement(selected)) return;
 
     selected.addClass('native-powerpoint-shape-selected');
     this.selectedTransform = cloneTransform(this.engine.getShapeTransform(selected));
@@ -1963,7 +1966,7 @@ export class NativePowerPointView extends FileView {
   private handleOutsideSlidePointerDown = (event: PointerEvent): void => {
     if (!this.activeEditor) return;
 
-    const target = event.target instanceof Node ? event.target : null;
+    const target = isNode(event.target) ? event.target : null;
     if (target && this.slideSurface?.contains(target)) return;
     if (target && this.activeEditor.contains(target)) return;
 
@@ -1979,7 +1982,7 @@ export class NativePowerPointView extends FileView {
   private handleCanvasPanePointerDown = (event: PointerEvent): void => {
     if (event.button !== 0) return;
 
-    const target = event.target instanceof Node ? event.target : null;
+    const target = isNode(event.target) ? event.target : null;
     if (!this.isCanvasPaneBackgroundTarget(target)) return;
 
     event.preventDefault();
@@ -2000,7 +2003,7 @@ export class NativePowerPointView extends FileView {
     if (this.slideSurface?.contains(target)) return false;
     if (this.activeEditor?.contains(target)) return false;
 
-    const element = target instanceof Element ? target : target.parentElement;
+    const element = isElement(target) ? target : target.parentElement;
     if (element?.closest('.native-powerpoint-selection-box')) return false;
 
     return true;
@@ -2420,9 +2423,9 @@ export class NativePowerPointView extends FileView {
     if (start === end) return;
 
     const boxes = this.getSvgInlineSelectionBoxes(element, start, end);
-    const textElement = element instanceof SVGTextElement ? element : element.closest('text');
+    const textElement = element.closest('text');
     const parent = textElement?.parentNode;
-    if (!textElement || !parent) return;
+    if (!isSVGTextElement(textElement) || !parent) return;
 
     for (const box of boxes) {
       const rect = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -2781,7 +2784,7 @@ export class NativePowerPointView extends FileView {
     if (!matrix || !paneRect) return null;
 
     let position: DOMPoint;
-    let extent: DOMRect | SVGRect | null = null;
+    let extent: SvgRectLike | null = null;
     try {
       const charCount = textElement.getNumberOfChars();
       if (charCount <= 0) return this.getFallbackInlineCaretGeometry(element, preferredHeight);
@@ -2847,7 +2850,7 @@ export class NativePowerPointView extends FileView {
   }
 
   private transformSvgRectToSvgRoot(
-    rect: DOMRect | SVGRect,
+    rect: SvgRectLike,
     elementMatrix: DOMMatrix,
     rootInverse: DOMMatrix
   ): SvgInlineSelectionBox | null {
@@ -2878,7 +2881,7 @@ export class NativePowerPointView extends FileView {
   }
 
   private transformSvgRectToLocalBox(
-    rect: DOMRect | SVGRect,
+    rect: SvgRectLike,
     matrix: DOMMatrix,
     paneRect: DOMRect
   ): { left: number; top: number; width: number; height: number } | null {
@@ -2909,7 +2912,7 @@ export class NativePowerPointView extends FileView {
   private getSelectedShapeElement(): SVGGElement | null {
     if (!this.svgEl || this.selectedShapeIndex === null) return null;
     const shape = this.svgEl.querySelector(`g[data-ooxml-shape-idx="${this.selectedShapeIndex}"]`);
-    return shape instanceof SVGGElement ? shape : null;
+    return isSVGGElement(shape) ? shape : null;
   }
 
   private getTextEditTarget(element: Element | null): TextEditTarget | null {
@@ -2918,7 +2921,7 @@ export class NativePowerPointView extends FileView {
       element?.closest('text')?.querySelectorAll('tspan[data-ooxml-run-idx]') ?? []
     );
     const run = directRun ?? (textRuns.length === 1 ? textRuns[0] : null);
-    if (!(run instanceof SVGTSpanElement) || run.closest(GENERATED_GRID_SELECTOR)) return null;
+    if (!isSVGTSpanElement(run) || run.closest(GENERATED_GRID_SELECTOR)) return null;
 
     const paragraph = run.closest('tspan[data-ooxml-para-idx]');
     const shape = run.closest('g[data-ooxml-shape-idx]');
@@ -2953,7 +2956,7 @@ export class NativePowerPointView extends FileView {
     const labelIndex = Number(textElement?.getAttribute('data-native-powerpoint-label-index'));
     const occurrence = Number(textElement?.getAttribute('data-native-powerpoint-label-occurrence'));
     if (
-      !(textElement instanceof SVGTextElement)
+      !isSVGTextElement(textElement)
       || shapeIndex === null
       || (kind !== 'chart' && kind !== 'table')
       || !Number.isFinite(labelIndex)
