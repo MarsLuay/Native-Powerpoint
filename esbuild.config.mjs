@@ -37,11 +37,9 @@ const context = await esbuild.context({
 	},
 	entryPoints: {
 		main: "src/main.ts",
-		"docx-editor": "src/docxEditorChunk.ts",
 	},
 	bundle: true,
 	external: [
-		"./docx-editor.js",
 		"obsidian",
 		"electron",
 		"@codemirror/autocomplete",

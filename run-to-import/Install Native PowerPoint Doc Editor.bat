@@ -16,11 +16,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" %*
 
 if errorlevel 1 (
   echo.
-  echo Native PowerPoint/Doc Editor install failed.
+  echo Native PowerPoint Doc Editor install failed.
   pause
   exit /b 1
 )
 
 echo.
-echo Native PowerPoint/Doc Editor install completed.
+echo Native PowerPoint Doc Editor install completed.
 pause

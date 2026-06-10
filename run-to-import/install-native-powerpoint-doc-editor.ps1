@@ -9,7 +9,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PluginRoot = Split-Path -Parent $ScriptDir
 $PluginManifest = Join-Path $PluginRoot "manifest.json"
 $PluginId = "native-powerpoint-doc-editor"
-$PluginName = "Native PowerPoint/Doc Editor"
+$PluginName = "Native PowerPoint Doc Editor"
 $ObsoletePluginIds = @("native-powerpoint", "docxidian")
 $LogFile = Join-Path $env:TEMP "native-powerpoint-doc-editor-install.log"
 $AutoSearchDepth = if ($env:NATIVE_POWERPOINT_AUTO_SEARCH_DEPTH) { [int]$env:NATIVE_POWERPOINT_AUTO_SEARCH_DEPTH } else { 6 }
@@ -218,7 +218,7 @@ function Prompt-ForVaultFolder {
     Write-Host $Reason
 
     while ($true) {
-        $candidate = Select-FolderWithDialog "Choose the Obsidian vault folder to install Native PowerPoint/Doc Editor into."
+        $candidate = Select-FolderWithDialog "Choose the Obsidian vault folder to install Native PowerPoint Doc Editor into."
 
         if (-not $candidate) {
             $candidate = Read-Host "Enter the path to your Obsidian vault folder, or leave blank to cancel"
@@ -325,7 +325,7 @@ function Select-ObsidianVault {
     }
 
     Write-Host ""
-    Write-Host "Multiple Obsidian vaults were detected. Choose where to install Native PowerPoint/Doc Editor:"
+    Write-Host "Multiple Obsidian vaults were detected. Choose where to install Native PowerPoint Doc Editor:"
     for ($i = 0; $i -lt $Vaults.Count; $i++) {
         Write-Host ("  {0}) {1}" -f ($i + 1), $Vaults[$i])
     }
@@ -426,7 +426,7 @@ function Install-NodeDependencies {
 }
 
 function Assert-ReleaseFilesPresent {
-    $requiredFiles = @("manifest.json", "main.js", "docx-editor.js", "styles.css")
+    $requiredFiles = @("manifest.json", "main.js", "styles.css")
     $missing = @()
 
     foreach ($fileName in $requiredFiles) {

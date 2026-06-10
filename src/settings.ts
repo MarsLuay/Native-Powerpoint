@@ -333,7 +333,7 @@ export class DocxidianSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Debug logging')
-			.setDesc('Log DOCX and PowerPoint diagnostics to the developer console and the in-memory Native PowerPoint/Doc Editor log.')
+			.setDesc('Log DOCX and PowerPoint diagnostics to the developer console and the in-memory Native PowerPoint Doc Editor log.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.debugLogging)
 				.onChange(async (value) => {
@@ -345,7 +345,7 @@ export class DocxidianSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Copy full debug log')
-			.setDesc('Copy all Native PowerPoint/Doc Editor logs produced for DOCX and PowerPoint to the clipboard.')
+			.setDesc('Copy all Native PowerPoint Doc Editor logs produced for DOCX and PowerPoint to the clipboard.')
 			.addButton(button => button
 				.setButtonText('Copy log')
 				.onClick(async () => {

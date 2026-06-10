@@ -1,7 +1,7 @@
 {
 	"name": "native-powerpoint-doc-editor",
-	"version": "0.0.5",
-	"description": "Native docx/pptx viewer + editor. Not reviewed by mods",
+	"version": "1.0.1",
+	"description": "Open, search, and edit DOCX and PPTX files directly in your vault.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

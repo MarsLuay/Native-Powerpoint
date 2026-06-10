@@ -54,7 +54,7 @@ function resolvePluginDir() {
 	}
 
 	temporaryPluginDir = fs.mkdtempSync(path.join(os.tmpdir(), 'native-powerpoint-doc-editor-smoke-'));
-	for (const fileName of ['main.js', 'docx-editor.js', 'manifest.json']) {
+	for (const fileName of ['main.js', 'manifest.json']) {
 		fs.copyFileSync(path.join(projectRoot, fileName), path.join(temporaryPluginDir, fileName));
 	}
 	return temporaryPluginDir;
@@ -272,7 +272,7 @@ function restoreEnvironment() {
 }
 
 function assertPluginFiles() {
-	for (const fileName of ['main.js', 'docx-editor.js', 'manifest.json']) {
+	for (const fileName of ['main.js', 'manifest.json']) {
 		const filePath = path.join(pluginDir, fileName);
 		assert.ok(fs.existsSync(filePath), `Missing installed plugin file: ${filePath}`);
 	}
@@ -337,7 +337,8 @@ async function runSmoke() {
 	installObsidianStub();
 	const manifest = JSON.parse(fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf8'));
 
-	const PluginCtor = require(path.join(pluginDir, 'main.js')).default;
+	const pluginModule = require(path.join(pluginDir, 'main.js'));
+	const PluginCtor = pluginModule.default;
 	assert.equal(typeof PluginCtor, 'function', 'Installed main.js should export a plugin class.');
 
 	const app = createAppStub();
@@ -360,8 +361,8 @@ async function runSmoke() {
 	assert.ok(plugin.commands.some((command) => command.id === 'search-docx-files'), 'Plugin should register the vault-wide DOCX search command.');
 	assert.ok(plugin.commands.some((command) => command.id === 'rebuild-docx-search-index'), 'Plugin should register the DOCX search rebuild command.');
 	assert.ok(plugin.commands.some((command) => command.id === 'save-current-powerpoint-file'), 'Plugin should register the PowerPoint save command.');
-	assert.ok(capturedLogs.some((entry) => entry.args.join(' ').includes('[Native PowerPoint/Doc Editor] plugin: Plugin loaded')), 'Debug logging should emit a plugin loaded entry.');
-	assert.ok(capturedLogs.some((entry) => entry.args.join(' ').includes('[Native PowerPoint/Doc Editor] chunk: Configured DOCX editor chunk paths')), 'Debug logging should emit configured chunk paths.');
+	assert.ok(capturedLogs.some((entry) => entry.args.join(' ').includes('[Native PowerPoint Doc Editor] plugin: Plugin loaded')), 'Debug logging should emit a plugin loaded entry.');
+	assert.ok(capturedLogs.some((entry) => entry.args.join(' ').includes('[Native PowerPoint Doc Editor] chunk: DOCX editor is bundled into main.js')), 'Debug logging should emit bundled DOCX editor mode.');
 
 	const docxViewFactory = plugin.registeredViews.find((view) => view.viewType === 'docxidian-docx-view')?.factory;
 	assert.equal(typeof docxViewFactory, 'function', 'Plugin should expose a DOCX view factory.');
@@ -419,9 +420,9 @@ async function runSmoke() {
 	assert.ok(Array.isArray(copiedDiagnostics.logs), 'Copied diagnostics should include log entries.');
 	assert.ok(copiedDiagnostics.logs.length > 0, 'Copied diagnostics should include at least one log entry.');
 
-	const chunk = require(path.join(pluginDir, 'docx-editor.js'));
+	const chunk = pluginModule;
 	for (const exportName of ['createDocxReactMount', 'DocxFileEmbed', 'renderDocxEmbeds', 'hasReviewMarkup']) {
-		assert.equal(typeof chunk[exportName], 'function', `docx-editor.js should export ${exportName}.`);
+		assert.equal(typeof chunk[exportName], 'function', `main.js should export bundled ${exportName}.`);
 	}
 
 	const docxFiles = process.env.DOCXIDIAN_SMOKE_DOCX
@@ -444,7 +445,7 @@ async function runSmoke() {
 runSmoke()
 	.then((result) => {
 		restoreEnvironment();
-	console.log(`Native PowerPoint/Doc Editor smoke passed: ${result.logCount} logs captured; ${result.docxCount} DOCX file(s) inspected.`);
+	console.log(`Native PowerPoint Doc Editor smoke passed: ${result.logCount} logs captured; ${result.docxCount} DOCX file(s) inspected.`);
 	if (result.docxCount === 0) {
 		console.log('- DOCX review-markup scan skipped: set DOCXIDIAN_SMOKE_DOCX or DOCXIDIAN_VAULT_ROOT to include sample documents.');
 	}

@@ -11,7 +11,7 @@ RUN_TO_IMPORT_DIR="${APP_DIR:h}"
 PLUGIN_ROOT="${RUN_TO_IMPORT_DIR:h}"
 PLUGIN_MANIFEST="${PLUGIN_ROOT}/manifest.json"
 PLUGIN_ID="native-powerpoint-doc-editor"
-PLUGIN_NAME="Native PowerPoint/Doc Editor"
+PLUGIN_NAME="Native PowerPoint Doc Editor"
 LOG_FILE="${HOME}/Library/Logs/native-powerpoint-doc-editor-install.log"
 OBSOLETE_PLUGIN_IDS=(native-powerpoint docxidian)
 AUTO_SEARCH_DEPTH="${NATIVE_POWERPOINT_AUTO_SEARCH_DEPTH:-6}"
@@ -303,7 +303,7 @@ choose_vault() {
     done
     items+=", $(osascript_quote "$other_item")"
 
-    selected="$(osascript -e 'set selectedVault to choose from list {'"$items"'} with title "Install Native PowerPoint Doc Editor" with prompt "Multiple Obsidian vaults were detected. Choose where to install Native PowerPoint/Doc Editor:" OK button name "Install" cancel button name "Cancel"' -e 'if selectedVault is false then error number -128' -e 'return item 1 of selectedVault')" || exit 1
+    selected="$(osascript -e 'set selectedVault to choose from list {'"$items"'} with title "Install Native PowerPoint Doc Editor" with prompt "Multiple Obsidian vaults were detected. Choose where to install Native PowerPoint Doc Editor:" OK button name "Install" cancel button name "Cancel"' -e 'if selectedVault is false then error number -128' -e 'return item 1 of selectedVault')" || exit 1
     if [[ "$selected" == "$other_item" ]]; then
       prompt_for_vault_folder "Choose the Obsidian vault folder to install into."
       return 0
@@ -378,7 +378,7 @@ verify_release_files() {
   local missing=()
   local file
 
-  for file in manifest.json main.js docx-editor.js styles.css; do
+  for file in manifest.json main.js styles.css; do
     if [[ ! -f "${PLUGIN_ROOT}/${file}" ]]; then
       missing+=("$file")
     fi

@@ -603,7 +603,7 @@ class ExternalDocxChangeModal extends Modal {
 		contentEl.empty();
 		contentEl.createEl('h2', { text: 'File changed on disk' });
 		contentEl.createEl('p', {
-			text: `${this.fileName} was modified outside Native PowerPoint/Doc Editor after it was opened.`,
+			text: `${this.fileName} was modified outside Native PowerPoint Doc Editor after it was opened.`,
 		});
 		contentEl.createEl('p', {
 			text: 'Saving now will overwrite those outside changes. Cancel and use Save as... or Duplicate current DOCX if you want to keep both versions.',
@@ -2691,8 +2691,8 @@ export class DocxView extends FileView {
 			addToggle('Turn off for DOCX files', 'Turns off plugin specifically for DOCX files in favor of another plugin </3', settings.disableDocxFiles, this.settingsController.setDisableDocxFiles);
 
 			addSection('Diagnostics');
-			addToggle('Debug logging', 'Print Native PowerPoint/Doc Editor diagnostics to the developer console.', settings.debugLogging, this.settingsController.setDebugLogging);
-			addButtonRow('Copy DOCX log', 'Copy DOCX-specific Native PowerPoint/Doc Editor logs to the clipboard.', 'Copy', () => this.settingsController.copyDocxLog(this.file?.path));
+			addToggle('Debug logging', 'Print Native PowerPoint Doc Editor diagnostics to the developer console.', settings.debugLogging, this.settingsController.setDebugLogging);
+			addButtonRow('Copy DOCX log', 'Copy DOCX-specific Native PowerPoint Doc Editor logs to the clipboard.', 'Copy', () => this.settingsController.copyDocxLog(this.file?.path));
 		}
 
 		private addEditorFileExportAsMenuItem() {

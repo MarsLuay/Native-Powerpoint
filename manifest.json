@@ -1,9 +1,9 @@
 {
 	"id": "native-powerpoint-doc-editor",
-	"name": "Native PowerPoint/Doc Editor",
-	"version": "0.0.5",
+	"name": "Native PowerPoint Doc Editor",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "Native docx/pptx viewer + editor. Not reviewed by mods",
-	"author": "Mars",
-	"isDesktopOnly": false
+	"description": "Open, search, and edit DOCX and PPTX files directly in your vault.",
+	"author": "Marwan Luay",
+	"isDesktopOnly": true
 }

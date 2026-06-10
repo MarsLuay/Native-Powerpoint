@@ -9,7 +9,7 @@ export interface DocxidianLogEntry {
 }
 
 const MAX_LOG_ENTRIES = 200;
-const LOG_PREFIX = '[Native PowerPoint/Doc Editor]';
+const LOG_PREFIX = '[Native PowerPoint Doc Editor]';
 const DEFAULT_LOG_FILE = 'Library/Logs/native-powerpoint-doc-editor.log';
 const LOG_STATE_KEY = '__nativePowerPointDocEditorLogState';
 

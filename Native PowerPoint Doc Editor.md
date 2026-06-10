@@ -1,15 +1,15 @@
-# Native PowerPoint/Doc Editor
+# Native PowerPoint Doc Editor
 
 ## Project Goal
 
-Work on the Native PowerPoint/Doc Editor Obsidian plugin locally so DOCX and PPTX files open, display, and edit properly inside the vault.
+Work on the Native PowerPoint Doc Editor Obsidian plugin locally so DOCX and PPTX files open, display, and edit properly inside the vault.
 
 ## Local Source
 
 - Source folder: `Projects/Native PowerPoint Doc Editor/`
-- Manifest name: `Native PowerPoint/Doc Editor`
+- Manifest name: `Native PowerPoint Doc Editor`
 - Manifest id: `native-powerpoint-doc-editor`
-- Version in manifest: `0.0.5`
+- Version in manifest: `1.0.1`
 - Purpose: Open, edit, and embed `.docx` documents and view/edit `.pptx` presentations in Obsidian
 
 The currently installed plugin copy lives separately at `.obsidian/plugins/native-powerpoint-doc-editor/`.

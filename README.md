@@ -1,63 +1,81 @@
-# Native PowerPoint/Doc Editor
+# Native PowerPoint Doc Editor
 
-Native PowerPoint/Doc Editor opens `.docx` and `.pptx` files directly inside Obsidian. It can edit DOCX files, view and edit PPTX files, search across DOCX text, and keep the original vault files in place.
+Native PowerPoint Doc Editor is an Obsidian plugin by Marwan Luay for opening, searching, and editing `.docx` and `.pptx` files directly inside your vault.
 
-It is not reviewed by Obsidian community plugin moderators. I made it for my own school/work document workflow, so use it carefully with important files.
+The plugin keeps Office files in place instead of converting them to Markdown. It is designed for school, work, and research vaults where Word documents and PowerPoint decks need small edits, search, review, or quick inspection without leaving Obsidian.
 
-## What this thing does
+## Features
 
-- Opens DOCX files in a native editor view
-- Opens PPTX files in a native PowerPoint-style view
-- Saves DOCX edits back to the original vault file
-- Supports Save as, Duplicate, and Export as
-- Adds conflict detection when a DOCX changes on disk while open
-- Can insert images into DOCX files from the top Insert menu
-- Adds File, Format, Insert, and Search menu controls that match the editor UI
-- Lets you scan a DOCX for hidden or suspicious prompt-injection-style text
-- Indexes DOCX text so vault-wide DOCX search can work
-- Lets you turn off DOCX or PPTX handling when another plugin should take over
+- Open DOCX files in a native editor view
+- Open PPTX files in a PowerPoint-style slide editor view
+- Edit and save DOCX files back to the original vault file
+- Edit PowerPoint text, tables, charts, shapes, slide objects, and chart data for supported `.pptx` decks
+- Search inside DOCX files from Obsidian
+- Search within opened PowerPoint decks
+- Duplicate, export, and save-as supported documents
+- Detect possible save conflicts when a file changes on disk while it is open
+- Scan DOCX files for hidden or suspicious text
+- Keep DOCX and PPTX handling optional so another plugin can take over those extensions
 
-## Easiest way to install it in this vault
+## Safety
 
-### Windows
+Native PowerPoint Doc Editor edits binary Office files. Keep backups of important documents, especially before making large changes to complex decks or documents. The plugin includes export validation and conflict checks, but Office file formats are broad and some advanced content may remain view-only.
 
-Double click the .bat in run-to-import
+## Installation
 
-### Mac
+### Community plugin directory
 
-Double click the .app in run-to-import
+After the plugin is accepted into the Obsidian community plugin directory:
 
-If the launcher cannot find your Obsidian vault automatically, it asks you to choose a folder. It checks that folder first, then searches inside it for an existing `.obsidian` folder. Only if it still cannot find one does it ask before creating a new `.obsidian` folder.
+1. Open Obsidian Settings.
+2. Go to Community plugins.
+3. Search for `Native PowerPoint Doc Editor`.
+4. Install and enable the plugin.
 
-### Linux
+### Manual install or beta testing
 
-Nothing yet
+1. Download the latest release assets from GitHub:
+   - `main.js`
+   - `manifest.json`
+   - `styles.css`
+2. Create this folder in your vault:
 
-## Working on it
+   ```text
+   .obsidian/plugins/native-powerpoint-doc-editor
+   ```
+
+3. Copy the release files into that folder.
+4. Reload Obsidian and enable `Native PowerPoint Doc Editor` from Community plugins.
+
+The `run-to-import` folder also contains local Windows and macOS installers for manual vault installation.
+
+## Usage
+
+- Open a `.docx` file in the file explorer to use the DOCX editor.
+- Open a `.pptx`, `.pptm`, `.ppsx`, `.ppsm`, `.potx`, or `.potm` file to use the PowerPoint view.
+- Use the toolbar and command palette actions for save, export, duplicate, search, and document diagnostics.
+- Use plugin settings to turn DOCX or PowerPoint handling on or off.
+
+## Desktop Support
+
+This plugin is desktop-only. It uses desktop Obsidian capabilities for Office editing, clipboard fidelity, local diagnostics, and larger binary file workflows.
+
+## Development
 
 ```bash
-cd "Projects/Native PowerPoint Doc Editor"
 npm install
 npm run build
 npm run lint
 npm run smoke
 npm run smoke:chart-data
+npm run smoke:generated-text
 npm run smoke:halos
 npm run smoke:objects
+npm run smoke:fonts
 ```
 
-The smoke test loads the installed plugin copy and checks that DOCX/PPTX registration and diagnostics still work.
-The PowerPoint chart/table smoke tests generate local fixture decks under `test-results/native-powerpoint-fixtures`, so they run without checked-in sample decks. You can still pass explicit deck paths with the `NATIVE_POWERPOINT_*_SAMPLE` environment variables when testing real files.
+PowerPoint smoke tests generate local fixture decks under `test-results/native-powerpoint-fixtures`, so they can run without checked-in sample decks. Real PPTX files can be passed with the `NATIVE_POWERPOINT_*_SAMPLE` environment variables where supported.
 
-## Useful paths
+## License
 
-- Source: `Projects/Native PowerPoint Doc Editor`
-- Installed plugin: `.obsidian/plugins/native-powerpoint-doc-editor`
-- Manifest id: `native-powerpoint-doc-editor`
-- Display name: `Native PowerPoint/Doc Editor`
-
-## Background
-
-This started as a DOCX plugin, then got merged with my PowerPoint plugin so school and work files can open in Obsidian without bouncing into Word, Pages, or PowerPoint for every small edit.
-
-The DOCX editor is based on Eigenpal's DOCX editor packages, with local Obsidian-specific glue and UI polish on top.
+Released under the 0BSD license.

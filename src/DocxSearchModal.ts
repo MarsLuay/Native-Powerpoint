@@ -76,7 +76,7 @@ export class DocxSearchModal extends Modal {
 		} catch (error) {
 			errorLog('search', 'Could not rebuild DOCX search index', error);
 			this.setStatus('Could not rebuild DOCX search index.');
-			new Notice('Could not rebuild DOCX search index. Check the Native PowerPoint/Doc Editor debug log.');
+			new Notice('Could not rebuild DOCX search index. Check the Native PowerPoint Doc Editor debug log.');
 		}
 	}
 

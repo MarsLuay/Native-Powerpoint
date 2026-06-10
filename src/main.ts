@@ -22,6 +22,8 @@ import { configureDocxidianLogger, errorLog, getDocxidianLogSnapshot, infoLog } 
 import { getDocxEditorLocale, normalizeDocxidianLanguage } from './locales';
 import { configureObsidianRuntime } from './obsidianRuntime';
 
+export { createDocxReactMount, DocxFileEmbed, renderDocxEmbeds, hasReviewMarkup } from './docxEditorChunk';
+
 const DOCX_EXTENSIONS = ['docx'];
 const DOCX_LOG_AREAS = new Set([
 	'chunk',
@@ -70,7 +72,7 @@ export default class DocxidianPlugin extends Plugin {
 
 		this.addCommand({
 			id: 'copy-docxidian-debug-log',
-			name: 'Copy Native PowerPoint/Doc Editor debug log',
+			name: 'Copy Native PowerPoint Doc Editor debug log',
 			callback: async () => {
 				await this.copyDebugLog();
 			},
@@ -270,17 +272,17 @@ export default class DocxidianPlugin extends Plugin {
 				disableDocxFiles: this.settings.disableDocxFiles,
 				disablePowerPointFiles: this.settings.disablePowerPointFiles,
 			},
-			chunkPaths: this.getDocxEditorChunkPaths(),
+			docxEditorBundle: 'main.js',
 			logs,
 		};
 
 		try {
 			await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-			const label = scope === 'docx' ? 'DOCX' : 'Native PowerPoint/Doc Editor';
+			const label = scope === 'docx' ? 'DOCX' : 'Native PowerPoint Doc Editor';
 			new Notice(`Copied ${payload.logs.length} ${label} log entries.`);
 		} catch (error) {
-			errorLog('diagnostics', 'Could not copy Native PowerPoint/Doc Editor debug log', error);
-			new Notice('Could not copy Native PowerPoint/Doc Editor debug log. Open the developer console and check window.docxidianDebugLogs.');
+			errorLog('diagnostics', 'Could not copy Native PowerPoint Doc Editor debug log', error);
+			new Notice('Could not copy Native PowerPoint Doc Editor debug log. Open the developer console and check window.docxidianDebugLogs.');
 		}
 	}
 
@@ -311,7 +313,7 @@ export default class DocxidianPlugin extends Plugin {
 		} catch (error) {
 			errorLog('search', 'Could not rebuild DOCX search index', error);
 			if (showNotice) {
-					new Notice('Could not rebuild DOCX search index. Check the Native PowerPoint/Doc Editor debug log.');
+					new Notice('Could not rebuild DOCX search index. Check the Native PowerPoint Doc Editor debug log.');
 			}
 		}
 	}
@@ -333,7 +335,7 @@ export default class DocxidianPlugin extends Plugin {
 	}
 
 	private async loadDocxSupport() {
-		configureDocxEditorChunkPaths(this.getDocxEditorChunkPaths());
+		configureDocxEditorChunkPaths([]);
 		this.docxSearchIndex = new DocxSearchIndex(this.app, this.manifest.dir);
 		await this.docxSearchIndex.load();
 
@@ -427,7 +429,7 @@ export default class DocxidianPlugin extends Plugin {
 			name: 'Search DOCX files in vault',
 			callback: () => {
 				if (!this.settings.enableDocxSearchIndex) {
-					new Notice('Turn on the DOCX search index in Native PowerPoint/Doc Editor settings first.');
+					new Notice('Turn on the DOCX search index in Native PowerPoint Doc Editor settings first.');
 					return;
 				}
 
@@ -531,15 +533,4 @@ export default class DocxidianPlugin extends Plugin {
 		void this.docxSearchIndex.removePath(path);
 	}
 
-	private getDocxEditorChunkPaths() {
-		const paths: string[] = [];
-		const adapterBasePath = (this.app.vault.adapter as { basePath?: string }).basePath;
-		const manifestDir = this.manifest.dir;
-
-		if (adapterBasePath && manifestDir) {
-			paths.push(`${adapterBasePath.replace(/[\\/]$/, '')}/${manifestDir}/docx-editor.js`);
-		}
-
-		return paths;
-	}
 }
