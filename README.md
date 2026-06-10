@@ -27,7 +27,7 @@ Double click the .bat in run-to-import
 
 Double click the .app in run-to-import
 
-If the launcher cannot find your Obsidian vault automatically, it asks you to choose the vault folder. If you choose a folder that does not have `.obsidian` yet, it asks before creating it.
+If the launcher cannot find your Obsidian vault automatically, it asks you to choose a folder. It checks that folder first, then searches inside it for an existing `.obsidian` folder. Only if it still cannot find one does it ask before creating a new `.obsidian` folder.
 
 ### Linux
 

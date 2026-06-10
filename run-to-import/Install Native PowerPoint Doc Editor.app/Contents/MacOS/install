@@ -14,6 +14,8 @@ PLUGIN_ID="native-powerpoint-doc-editor"
 PLUGIN_NAME="Native PowerPoint/Doc Editor"
 LOG_FILE="${HOME}/Library/Logs/native-powerpoint-doc-editor-install.log"
 OBSOLETE_PLUGIN_IDS=(native-powerpoint docxidian)
+AUTO_SEARCH_DEPTH="${NATIVE_POWERPOINT_AUTO_SEARCH_DEPTH:-6}"
+SELECTED_DIR_SEARCH_DEPTH="${NATIVE_POWERPOINT_SELECTED_DIR_SEARCH_DEPTH:-10}"
 
 mkdir -p "${LOG_FILE:h}"
 : > "$LOG_FILE"
@@ -34,7 +36,7 @@ dialog() {
     return 0
   fi
 
-  if command -v osascript >/dev/null 2>&1; then
+  if command -v osascript >/dev/null 2>&1 && [[ "${NATIVE_POWERPOINT_INSTALLER_NO_DIALOG:-}" != "1" ]]; then
     osascript -e 'display dialog '"$(osascript_quote "$message")"' with title '"$(osascript_quote "$title")"' buttons {"OK"} default button "OK"' >/dev/null 2>&1 || true
   else
     print -r -- "$message" >&2
@@ -112,6 +114,23 @@ print_vault_if_valid() {
   print -r -- "${vault:A}"
 }
 
+search_vaults_under() {
+  local root="$1"
+  local depth="${2:-$SELECTED_DIR_SEARCH_DEPTH}"
+  local obsidian_dir
+
+  [[ -d "$root" ]] || return 0
+
+  find "$root" -maxdepth "$depth" \
+    \( -path '*/.Trash' -o -path '*/node_modules' -o -path '*/Library/Caches' -o -path '*/Library/Application Support' \) -prune -o \
+    -type d -name ".obsidian" -print 2>/dev/null |
+    while IFS= read -r obsidian_dir; do
+      if ! is_skipped_path "$obsidian_dir"; then
+        print_vault_if_valid "${obsidian_dir:h}"
+      fi
+    done | dedupe_lines
+}
+
 prompt_create_obsidian_dir() {
   local vault="$1"
   local resolved="${vault:A}"
@@ -144,6 +163,7 @@ prompt_for_vault_folder() {
   local reason="$1"
   local selected
   local resolved
+  local nested_vaults
 
   log "$reason"
 
@@ -170,6 +190,14 @@ prompt_for_vault_folder() {
       return 0
     fi
 
+    log "Searching selected folder for existing Obsidian vaults: ${selected}"
+    nested_vaults=("${(@f)$(search_vaults_under "$selected" "$SELECTED_DIR_SEARCH_DEPTH")}")
+    nested_vaults=("${(@)nested_vaults:#}")
+    if (( ${#nested_vaults[@]} > 0 )); then
+      choose_vault "${nested_vaults[@]}"
+      return 0
+    fi
+
     if resolved="$(prompt_create_obsidian_dir "$selected")"; then
       print -r -- "$resolved"
       return 0
@@ -182,6 +210,7 @@ discover_vaults() {
   local obsidian_dir
   local current
   local search_roots=()
+  local broad_search_roots=()
   local vaults=()
 
   add_candidate() {
@@ -196,6 +225,11 @@ discover_vaults() {
 
   if [[ -n "${OBSIDIAN_VAULT:-}" ]]; then
     add_candidate "$OBSIDIAN_VAULT"
+    if (( ${#vaults[@]} == 0 )) && [[ -d "$OBSIDIAN_VAULT" ]]; then
+      while IFS= read -r root; do
+        add_candidate "$root"
+      done < <(search_vaults_under "$OBSIDIAN_VAULT" "$SELECTED_DIR_SEARCH_DEPTH")
+    fi
     (( ${#vaults[@]} > 0 )) && printf '%s\n' "${vaults[@]}"
     return 0
   fi
@@ -211,13 +245,24 @@ discover_vaults() {
 
   for root in "${search_roots[@]}"; do
     [[ -d "$root" ]] || continue
-    find "$root" -maxdepth 5 -type d -name ".obsidian" -print 2>/dev/null |
-      while IFS= read -r obsidian_dir; do
-        if ! is_skipped_path "$obsidian_dir"; then
-          add_candidate "${obsidian_dir:h}"
-        fi
-      done
+    while IFS= read -r obsidian_dir; do
+      add_candidate "$obsidian_dir"
+    done < <(search_vaults_under "$root" "$AUTO_SEARCH_DEPTH")
   done
+
+  if (( ${#vaults[@]} == 0 )); then
+    broad_search_roots=("$HOME" "/Users" "/Volumes")
+    for root in "${broad_search_roots[@]}"; do
+      [[ -d "$root" ]] || continue
+      log "Doing broader vault search under ${root}."
+      while IFS= read -r obsidian_dir; do
+        add_candidate "$obsidian_dir"
+      done < <(search_vaults_under "$root" "$SELECTED_DIR_SEARCH_DEPTH")
+      if (( ${#vaults[@]} > 0 )); then
+        break
+      fi
+    done
+  fi
 
   (( ${#vaults[@]} > 0 )) && printf '%s\n' "${vaults[@]}"
 }

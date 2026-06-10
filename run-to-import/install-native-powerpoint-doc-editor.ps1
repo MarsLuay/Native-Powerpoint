@@ -12,6 +12,8 @@ $PluginId = "native-powerpoint-doc-editor"
 $PluginName = "Native PowerPoint/Doc Editor"
 $ObsoletePluginIds = @("native-powerpoint", "docxidian")
 $LogFile = Join-Path $env:TEMP "native-powerpoint-doc-editor-install.log"
+$AutoSearchDepth = if ($env:NATIVE_POWERPOINT_AUTO_SEARCH_DEPTH) { [int]$env:NATIVE_POWERPOINT_AUTO_SEARCH_DEPTH } else { 6 }
+$SelectedDirSearchDepth = if ($env:NATIVE_POWERPOINT_SELECTED_DIR_SEARCH_DEPTH) { [int]$env:NATIVE_POWERPOINT_SELECTED_DIR_SEARCH_DEPTH } else { 10 }
 
 Set-Content -Path $LogFile -Value "" -Encoding UTF8
 
@@ -118,6 +120,40 @@ function Add-VaultCandidate {
     }
 }
 
+function Find-VaultsUnder {
+    param(
+        [string]$Root,
+        [int]$Depth = $SelectedDirSearchDepth
+    )
+
+    $vaults = [System.Collections.Generic.List[string]]::new()
+
+    if (-not $Root) {
+        return $vaults
+    }
+
+    $expanded = [Environment]::ExpandEnvironmentVariables($Root.Trim('"'))
+    if (-not (Test-Path $expanded)) {
+        return $vaults
+    }
+
+    try {
+        $resolvedRoot = (Resolve-Path $expanded).Path
+        $obsidianDirs = Get-ChildItem -Path $resolvedRoot -Force -Directory -Filter ".obsidian" -Recurse -Depth $Depth -ErrorAction SilentlyContinue
+        foreach ($obsidianDir in $obsidianDirs) {
+            if (Test-SkippedPath $obsidianDir.FullName) {
+                continue
+            }
+
+            Add-VaultCandidate $vaults $obsidianDir.Parent.FullName
+        }
+    } catch {
+        Write-Log "WARNING: Could not search for vaults under ${Root}: $($_.Exception.Message)"
+    }
+
+    return $vaults
+}
+
 function Resolve-InstallVault {
     param([string]$Candidate)
 
@@ -135,6 +171,12 @@ function Resolve-InstallVault {
     $obsidianDir = Join-Path $resolved ".obsidian"
     if (Test-Path $obsidianDir) {
         return $resolved
+    }
+
+    Write-Log "Searching selected folder for existing Obsidian vaults: $resolved"
+    $nestedVaults = @(Find-VaultsUnder $resolved $SelectedDirSearchDepth)
+    if ($nestedVaults.Count -gt 0) {
+        return Select-ObsidianVault $nestedVaults
     }
 
     Write-Host ""
@@ -200,11 +242,21 @@ function Find-ObsidianVaults {
 
     if ($VaultPath) {
         Add-VaultCandidate $vaults $VaultPath
+        if ($vaults.Count -eq 0) {
+            foreach ($vault in (Find-VaultsUnder $VaultPath $SelectedDirSearchDepth)) {
+                Add-VaultCandidate $vaults $vault
+            }
+        }
         return $vaults
     }
 
     if ($env:OBSIDIAN_VAULT) {
         Add-VaultCandidate $vaults $env:OBSIDIAN_VAULT
+        if ($vaults.Count -eq 0) {
+            foreach ($vault in (Find-VaultsUnder $env:OBSIDIAN_VAULT $SelectedDirSearchDepth)) {
+                Add-VaultCandidate $vaults $vault
+            }
+        }
         return $vaults
     }
 
@@ -225,24 +277,36 @@ function Find-ObsidianVaults {
         $searchRootCandidates += (Join-Path $profileRoot "Documents")
         $searchRootCandidates += (Join-Path $profileRoot "Desktop")
     }
+    $fileSystemDrives = Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue |
+        Where-Object { $_.Root -and (Test-Path $_.Root) } |
+        ForEach-Object { $_.Root }
+
     $searchRootCandidates += $env:OneDrive
     $searchRootCandidates += $env:OneDriveConsumer
     $searchRootCandidates += $env:OneDriveCommercial
+    if ($env:SystemDrive) {
+        $searchRootCandidates += (Join-Path $env:SystemDrive "Users")
+    }
 
     $searchRoots = $searchRootCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
 
     foreach ($root in $searchRoots) {
-        try {
-            $obsidianDirs = Get-ChildItem -Path $root -Force -Directory -Filter ".obsidian" -Recurse -Depth 5 -ErrorAction SilentlyContinue
-            foreach ($obsidianDir in $obsidianDirs) {
-                if (Test-SkippedPath $obsidianDir.FullName) {
-                    continue
-                }
+        foreach ($vault in (Find-VaultsUnder $root $AutoSearchDepth)) {
+            Add-VaultCandidate $vaults $vault
+        }
+    }
 
-                Add-VaultCandidate $vaults $obsidianDir.Parent.FullName
+    if ($vaults.Count -eq 0) {
+        $broadSearchRoots = @($searchRoots + $fileSystemDrives) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
+        foreach ($root in $broadSearchRoots) {
+            Write-Log "Doing broader vault search under ${root}."
+            foreach ($vault in (Find-VaultsUnder $root $SelectedDirSearchDepth)) {
+                Add-VaultCandidate $vaults $vault
             }
-        } catch {
-            Write-Log "WARNING: Could not search for vaults under ${root}: $($_.Exception.Message)"
+
+            if ($vaults.Count -gt 0) {
+                break
+            }
         }
     }
 
