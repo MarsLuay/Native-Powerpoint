@@ -769,6 +769,7 @@ export class NativePowerPointView extends FileView {
 
     void this.refreshFindMatches({ reveal: Boolean(this.findInputEl?.value.trim()) });
     window.requestAnimationFrame(() => {
+      this.findPanelEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       this.findInputEl?.focus();
       this.findInputEl?.select();
     });

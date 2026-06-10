@@ -117,7 +117,7 @@ function setDrawingText(container: Element, text: string): void {
 
 function getDrawingParagraphs(container: Element): Element[] {
   const textBody = getDescendants(container, 'txBody')
-    .find((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
+    .find((element) => element.namespaceURI === DRAWINGML_NAMESPACE || element.namespaceURI === container.namespaceURI);
   const scope = textBody ?? container;
   return getElementChildren(scope)
     .filter((element) => element.localName === 'p' && element.namespaceURI === DRAWINGML_NAMESPACE);
@@ -663,6 +663,57 @@ async function normalizeSlideManifest(buffer: ArrayBuffer, slideCount: number): 
   );
 }
 
+async function preserveSlideExtensionLists(previousBuffer: ArrayBuffer, exportedBuffer: ArrayBuffer): Promise<ArrayBuffer> {
+  const [previousZip, exportedZip] = await Promise.all([
+    extractZip(previousBuffer),
+    extractZip(exportedBuffer)
+  ]);
+  const modifications = new Map<string, string>();
+
+  for (const [slidePath, exportedXml] of exportedZip.textFiles) {
+    if (!/^ppt\/slides\/slide\d+\.xml$/.test(slidePath)) continue;
+
+    const previousXml = previousZip.textFiles.get(slidePath);
+    if (!previousXml) continue;
+
+    const mergedXml = preserveSlideExtensionList(previousXml, exportedXml, slidePath);
+    if (mergedXml !== null && mergedXml !== exportedXml) {
+      modifications.set(slidePath, mergedXml);
+    }
+  }
+
+  return modifications.size > 0
+    ? buildZip(exportedBuffer, modifications)
+    : exportedBuffer;
+}
+
+function preserveSlideExtensionList(previousXml: string, exportedXml: string, slidePath: string): string | null {
+  const previousDocument = parseXml(previousXml, slidePath);
+  const exportedDocument = parseXml(exportedXml, slidePath);
+  const previousCommonSlide = getDescendants(previousDocument, 'cSld')[0];
+  const exportedCommonSlide = getDescendants(exportedDocument, 'cSld')[0];
+  if (!previousCommonSlide || !exportedCommonSlide) return null;
+
+  const previousExtensionList = getDirectChild(previousCommonSlide, 'extLst');
+  if (!previousExtensionList) return null;
+
+  const exportedExtensionList = getDirectChild(exportedCommonSlide, 'extLst');
+  const importedExtensionList = exportedDocument.importNode(previousExtensionList, true);
+
+  if (exportedExtensionList) {
+    exportedCommonSlide.replaceChild(importedExtensionList, exportedExtensionList);
+  } else {
+    exportedCommonSlide.appendChild(importedExtensionList);
+  }
+
+  return serializeXml(exportedDocument);
+}
+
+function getDirectChild(element: Element, localName: string): Element | null {
+  return getElementChildren(element)
+    .find((child) => child.localName === localName) ?? null;
+}
+
 export interface RenderedSlide {
   svg: string;
   slideCount: number;
@@ -676,20 +727,22 @@ export interface SlideMoveResult {
 export class PresentationEngine {
   private renderer: PptxRenderer;
   private fontFidelity: FontFidelity;
+  private currentBuffer: ArrayBuffer;
   private slideCountValue = 0;
   private chartTextValues = new Map<string, string[]>();
   private chartAxisFormats = new Map<string, ChartAxisFormat[]>();
   private chartDataDescriptors = new Map<string, ChartDataDescriptor>();
 
-  private constructor(renderer: PptxRenderer, fontFidelity: FontFidelity, slideCount: number) {
+  private constructor(renderer: PptxRenderer, fontFidelity: FontFidelity, slideCount: number, buffer: ArrayBuffer) {
     this.renderer = renderer;
     this.fontFidelity = fontFidelity;
+    this.currentBuffer = buffer.slice(0);
     this.slideCountValue = slideCount;
   }
 
   static async load(buffer: ArrayBuffer): Promise<PresentationEngine> {
     const { renderer, fontFidelity, slideCount } = await PresentationEngine.createRenderer(buffer);
-    const engine = new PresentationEngine(renderer, fontFidelity, slideCount);
+    const engine = new PresentationEngine(renderer, fontFidelity, slideCount, buffer);
     await engine.refreshChartTextValues(buffer);
     return engine;
   }
@@ -756,7 +809,7 @@ export class PresentationEngine {
       throw new Error('Could not find chart data for the selected object.');
     }
 
-    const rawExport = await this.renderer.exportPptx();
+    const rawExport = await this.exportRendererState();
     const patchedExport = await patchChartData(rawExport, descriptor, update);
     await this.reloadFromBuffer(patchedExport, this.slideCountValue);
   }
@@ -845,7 +898,7 @@ export class PresentationEngine {
   }
 
   async updateShapeText(slideIndex: number, shapeIndex: number, text: string): Promise<void> {
-    const rawExport = await this.renderer.exportPptx();
+    const rawExport = await this.exportRendererState();
     const slidePath = getSlidePath(slideIndex);
     const zip = await extractZip(rawExport);
     const slideXml = zip.textFiles.get(slidePath);
@@ -875,7 +928,7 @@ export class PresentationEngine {
     runIndex: number,
     text: string
   ): Promise<void> {
-    const rawExport = await this.renderer.exportPptx();
+    const rawExport = await this.exportRendererState();
     const slidePath = getSlidePath(slideIndex);
     const zip = await extractZip(rawExport);
     const slideXml = zip.textFiles.get(slidePath);
@@ -897,7 +950,7 @@ export class PresentationEngine {
   }
 
   async updateGeneratedText(slideIndex: number, shapeIndex: number, edit: GeneratedTextEdit, text: string): Promise<void> {
-    const rawExport = await this.renderer.exportPptx();
+    const rawExport = await this.exportRendererState();
     const zip = await extractZip(rawExport);
     const modifications = new Map<string, string>();
 
@@ -966,14 +1019,14 @@ export class PresentationEngine {
   }
 
   async copyShape(slideIndex: number, shapeIndex: number): Promise<SlideObjectClipboard> {
-    return createSlideObjectClipboard(await this.renderer.exportPptx(), slideIndex, shapeIndex);
+    return createSlideObjectClipboard(await this.exportRendererState(), slideIndex, shapeIndex);
   }
 
   async pasteShape(
     clipboard: SlideObjectClipboard,
     destinationSlideIndex: number
   ): Promise<number> {
-    const rawExport = await this.renderer.exportPptx();
+    const rawExport = await this.exportRendererState();
     const result = await pasteSlideObject(rawExport, clipboard, destinationSlideIndex);
     await this.reloadFromBuffer(result.buffer, this.slideCountValue);
     return result.shapeIndex;
@@ -1018,19 +1071,20 @@ export class PresentationEngine {
   }
 
   async export(): Promise<ArrayBuffer> {
-    return this.renderer.exportPptx();
+    return this.exportRendererState();
   }
 
   async restoreSnapshot(buffer: ArrayBuffer): Promise<void> {
     const { renderer, fontFidelity, slideCount } = await PresentationEngine.createRenderer(buffer);
     this.renderer = renderer;
     this.fontFidelity = fontFidelity;
+    this.currentBuffer = buffer.slice(0);
     this.slideCountValue = slideCount;
     await this.refreshChartTextValues(buffer);
   }
 
   private async reloadAfterSlideManagement(expectedSlideCount: number): Promise<void> {
-    const rawExport = await this.renderer.exportPptx();
+    const rawExport = await this.exportRendererState();
     const normalizedExport = await normalizeSlideManifest(rawExport, expectedSlideCount);
     await this.reloadFromBuffer(normalizedExport, expectedSlideCount);
   }
@@ -1043,8 +1097,16 @@ export class PresentationEngine {
 
     this.renderer = renderer;
     this.fontFidelity = fontFidelity;
+    this.currentBuffer = buffer.slice(0);
     this.slideCountValue = slideCount;
     await this.refreshChartTextValues(buffer);
+  }
+
+  private async exportRendererState(): Promise<ArrayBuffer> {
+    const rawExport = await this.renderer.exportPptx();
+    const preservedExport = await preserveSlideExtensionLists(this.currentBuffer, rawExport);
+    this.currentBuffer = preservedExport.slice(0);
+    return preservedExport;
   }
 
   private async refreshChartTextValues(buffer: ArrayBuffer): Promise<void> {

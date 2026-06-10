@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
@@ -31,26 +31,59 @@ function findChrome() {
   return chrome;
 }
 
-function runChrome(chromePath, args) {
+function runChrome(chromePath, args, options = {}) {
+  const timeoutMs = options.timeoutMs ?? 15000;
   return new Promise((resolve, reject) => {
     const child = spawn(chromePath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGTERM');
+      setTimeout(() => {
+        if (child.exitCode === null) child.kill('SIGKILL');
+      }, 2000).unref();
+    }, timeoutMs);
+
     child.stdout.on('data', (chunk) => {
       stdout += chunk;
     });
     child.stderr.on('data', (chunk) => {
       stderr += chunk;
     });
-    child.on('error', reject);
+    child.on('error', (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
     child.on('close', (code) => {
+      clearTimeout(timer);
       if (code === 0) {
         resolve({ stdout, stderr });
         return;
       }
+
+      if (timedOut && options.resolveOnTimeout?.({ stdout, stderr }) === true) {
+        resolve({ stdout, stderr });
+        return;
+      }
+
+      if (timedOut) {
+        reject(new Error(`Chrome timed out after ${timeoutMs} ms: ${stderr || stdout}`));
+        return;
+      }
+
       reject(new Error(`Chrome exited with ${code}: ${stderr || stdout}`));
     });
   });
+}
+
+function fileHasBytes(filePath) {
+  try {
+    return statSync(filePath).size > 0;
+  } catch {
+    return false;
+  }
 }
 
 const html = String.raw`<!doctype html>
@@ -486,13 +519,17 @@ await runChrome(chromePath, [
   ...baseArgs,
   `--screenshot=${screenshotPath}`,
   url
-]);
+], {
+  resolveOnTimeout: () => fileHasBytes(screenshotPath)
+});
 
 const dump = await runChrome(chromePath, [
   ...baseArgs,
   '--dump-dom',
   url
-]);
+], {
+  resolveOnTimeout: ({ stdout }) => stdout.includes('data-metrics=')
+});
 
 const match = dump.stdout.match(/data-metrics="([^"]+)"/);
 if (!match) {

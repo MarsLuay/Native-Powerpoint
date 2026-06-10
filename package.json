@@ -13,6 +13,7 @@
 		"smoke:halos": "node scripts/smoke-text-halos.mjs",
 		"smoke:fonts": "node scripts/smoke-font-fidelity.mjs",
 		"smoke:objects": "node scripts/smoke-object-clipboard.mjs",
+		"smoke:pptx-sample": "node scripts/smoke-online-powerpoint-sample.mjs",
 		"visual:caret": "node scripts/visual-inline-caret.mjs",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint \"src/**/*.{ts,tsx}\""
