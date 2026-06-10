@@ -4,6 +4,7 @@ import { createEditorTranslator } from './editorTranslations';
 import { loadDocxEditorChunk } from './docxEditorLoader';
 import { findHiddenDocxText, type HiddenTextFinding } from './docxHiddenTextScanner';
 import { extractDocxText } from './docxTextExtractor';
+import { isHTMLElement } from './domGuards';
 import { debugLog, errorLog, infoLog, warnLog } from './logger';
 import { DOCXIDIAN_LANGUAGE_OPTIONS, DEFAULT_LANGUAGE, normalizeDocxidianLanguage, type DocxidianLanguage } from './locales';
 import { DEFAULT_SETTINGS, normalizeDefaultZoom } from './settings';
@@ -771,8 +772,8 @@ function shouldHandleEditorSaveClick(target: EventTarget | null, saveLabels: str
 	}
 
 	let candidate: Element | null = target;
-	while (candidate && candidate !== document.body) {
-		if (candidate instanceof HTMLElement) {
+	while (candidate && candidate !== activeDocument.body) {
+		if (isHTMLElement(candidate)) {
 			const text = normalizeMenuText(candidate.textContent ?? '');
 			if (saveLabels.some((label) => textStartsWithMenuLabel(text, label))) {
 				return true;
@@ -892,7 +893,7 @@ export class DocxView extends FileView {
 		this.closeEditorOptionSearchMenu();
 		this.closeEditorEditMenu();
 		this.closeEditorSettingsMenu();
-		document.body.classList.remove('docxidian-editor-hovering');
+		activeDocument.body.classList.remove('docxidian-editor-hovering');
 		this.hostEl = null;
 		this.buffer = null;
 		this.error = null;
@@ -1309,9 +1310,9 @@ export class DocxView extends FileView {
 			return null;
 		}
 
-			const normalizedMenuLabel = normalizeMenuText(menuLabel);
-			for (const menuItem of Array.from(root.querySelectorAll<HTMLElement>('[role="menubar"] > div'))) {
-				const button = menuItem.querySelector(':scope > button') as HTMLButtonElement | null;
+		const normalizedMenuLabel = normalizeMenuText(menuLabel);
+		for (const menuItem of Array.from(root.querySelectorAll<HTMLElement>('[role="menubar"] > div'))) {
+			const button = menuItem.querySelector<HTMLButtonElement>(':scope > button');
 			const label = normalizeMenuText(button?.textContent ?? '');
 			if (button && label === normalizedMenuLabel) {
 				return button;
@@ -1331,7 +1332,7 @@ export class DocxView extends FileView {
 		this.activateEditorControl(menuButton);
 		window.setTimeout(() => {
 			if (!this.clickEditorControlByLabels(optionLabels)) {
-				document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+				activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 			}
 		});
 	}
@@ -2005,7 +2006,7 @@ export class DocxView extends FileView {
 
 		const removeTitles = () => {
 			this.hostEl?.querySelectorAll('.ep-root button[title]').forEach((button) => {
-				if (button instanceof HTMLElement) {
+				if (isHTMLElement(button)) {
 					const title = button.getAttribute('title');
 					if (title) {
 						button.dataset.docxidianNativeTitle = title;
@@ -2074,7 +2075,7 @@ export class DocxView extends FileView {
 				return;
 			}
 
-			const menuItems = Array.from(menubar.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+			const menuItems = Array.from(menubar.children).filter((child): child is HTMLElement => isHTMLElement(child));
 			const findTopLevelMenu = (label: string) => menuItems.find((item) => {
 				const button = item.querySelector(':scope > button');
 				return normalizeMenuText(button?.textContent ?? '') === label;
@@ -2088,7 +2089,7 @@ export class DocxView extends FileView {
 					&& Boolean(child.querySelector(':scope > button'))
 				));
 			const wrapper = existingEditWrapper
-				?? (sourceWrapper ? sourceWrapper.cloneNode(true) as HTMLElement : document.createElement('div'));
+				?? (sourceWrapper ? sourceWrapper.cloneNode(true) as HTMLElement : activeDocument.createElement('div'));
 			wrapper.dataset.docxidianEditMenuItem = 'true';
 			wrapper.dataset.docxidianNoToolbarTooltip = 'true';
 			wrapper.addClass('docxidian-edit-menu-item');
@@ -2102,7 +2103,7 @@ export class DocxView extends FileView {
 				}
 			});
 			if (!button) {
-				button = document.createElement('button');
+				button = activeDocument.createElement('button');
 				wrapper.appendChild(button);
 			}
 
@@ -2203,10 +2204,10 @@ export class DocxView extends FileView {
 			}
 		};
 
-		document.addEventListener('mousedown', handleOutsidePointer, true);
+		activeDocument.addEventListener('mousedown', handleOutsidePointer, true);
 		popoverEl.addEventListener('keydown', handleKeyDown);
 		this.editorEditCleanup = () => {
-			document.removeEventListener('mousedown', handleOutsidePointer, true);
+			activeDocument.removeEventListener('mousedown', handleOutsidePointer, true);
 			popoverEl.removeEventListener('keydown', handleKeyDown);
 		};
 	}
@@ -2227,13 +2228,13 @@ export class DocxView extends FileView {
 			}
 
 				const sourceWrapper = Array.from(menubar.children).find((child): child is HTMLElement => (
-					child instanceof HTMLElement
+					isHTMLElement(child)
 					&& !child.matches('[data-docxidian-edit-menu-item], [data-docxidian-search-menu-item], [data-docxidian-settings-menu-item]')
 					&& Boolean(child.querySelector(':scope > button'))
 				));
 				const wrapper = sourceWrapper
 					? sourceWrapper.cloneNode(true) as HTMLElement
-					: document.createElement('div');
+					: activeDocument.createElement('div');
 				wrapper.dataset.docxidianSearchMenuItem = 'true';
 				wrapper.dataset.docxidianNoToolbarTooltip = 'true';
 				wrapper.addClass('docxidian-search-menu-item');
@@ -2247,7 +2248,7 @@ export class DocxView extends FileView {
 					}
 				});
 				if (!button) {
-					button = document.createElement('button');
+					button = activeDocument.createElement('button');
 					wrapper.appendChild(button);
 				}
 				button.type = 'button';
@@ -2406,11 +2407,11 @@ export class DocxView extends FileView {
 
 			inputEl.addEventListener('input', handleInput);
 			inputEl.addEventListener('keydown', handleKeyDown);
-			document.addEventListener('mousedown', handleOutsidePointer, true);
+			activeDocument.addEventListener('mousedown', handleOutsidePointer, true);
 			this.optionSearchCleanup = () => {
 				inputEl.removeEventListener('input', handleInput);
 				inputEl.removeEventListener('keydown', handleKeyDown);
-				document.removeEventListener('mousedown', handleOutsidePointer, true);
+				activeDocument.removeEventListener('mousedown', handleOutsidePointer, true);
 			};
 
 			renderResults();
@@ -2433,13 +2434,13 @@ export class DocxView extends FileView {
 				}
 
 				const sourceWrapper = Array.from(menubar.children).find((child): child is HTMLElement => (
-					child instanceof HTMLElement
+					isHTMLElement(child)
 					&& !child.matches('[data-docxidian-edit-menu-item], [data-docxidian-search-menu-item], [data-docxidian-settings-menu-item]')
 					&& Boolean(child.querySelector(':scope > button'))
 				));
 				const wrapper = sourceWrapper
 					? sourceWrapper.cloneNode(true) as HTMLElement
-					: document.createElement('div');
+					: activeDocument.createElement('div');
 				wrapper.dataset.docxidianSettingsMenuItem = 'true';
 				wrapper.dataset.docxidianNoToolbarTooltip = 'true';
 				wrapper.addClass('docxidian-settings-menu-item');
@@ -2453,7 +2454,7 @@ export class DocxView extends FileView {
 					}
 				});
 				if (!button) {
-					button = document.createElement('button');
+					button = activeDocument.createElement('button');
 					wrapper.appendChild(button);
 				}
 
@@ -2533,10 +2534,10 @@ export class DocxView extends FileView {
 				}
 			};
 
-			document.addEventListener('mousedown', handleOutsidePointer, true);
+			activeDocument.addEventListener('mousedown', handleOutsidePointer, true);
 			popoverEl.addEventListener('keydown', handleKeyDown);
 			this.editorSettingsCleanup = () => {
-				document.removeEventListener('mousedown', handleOutsidePointer, true);
+				activeDocument.removeEventListener('mousedown', handleOutsidePointer, true);
 				popoverEl.removeEventListener('keydown', handleKeyDown);
 			};
 		}
@@ -2683,7 +2684,7 @@ export class DocxView extends FileView {
 			options: { showChevron?: boolean } = {},
 		) => {
 			const labelElement = Array.from(button.children).find((child): child is HTMLElement => (
-				child instanceof HTMLElement
+				isHTMLElement(child)
 				&& sourceLabels.some(sourceLabel => textStartsWithMenuLabel(normalizeMenuText(child.textContent ?? ''), sourceLabel))
 			));
 
@@ -2691,7 +2692,7 @@ export class DocxView extends FileView {
 				labelElement.textContent = label;
 				Array.from(button.children).forEach((child) => {
 					if (
-						child instanceof HTMLElement
+						isHTMLElement(child)
 						&& child !== labelElement
 						&& /^(?:ctrl|cmd|⌘)/.test(normalizeMenuText(child.textContent ?? ''))
 					) {
@@ -2704,7 +2705,7 @@ export class DocxView extends FileView {
 
 			button.querySelectorAll('[data-docxidian-export-chevron]').forEach(chevron => chevron.remove());
 				if (options.showChevron) {
-					const chevron = document.createElement('span');
+					const chevron = activeDocument.createElement('span');
 					chevron.dataset.docxidianExportChevron = 'true';
 					chevron.textContent = '›';
 					chevron.addClass('docxidian-export-chevron');
@@ -2726,7 +2727,7 @@ export class DocxView extends FileView {
 				}
 
 				const dropdown = Array.from(menuItem.children).find((child): child is HTMLElement => (
-					child instanceof HTMLElement
+					isHTMLElement(child)
 					&& child !== menuButton
 					&& Boolean(child.querySelector(':scope > div > button, :scope > button'))
 				));
@@ -2734,7 +2735,7 @@ export class DocxView extends FileView {
 					return;
 				}
 
-				const itemWrappers = Array.from(dropdown.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+				const itemWrappers = Array.from(dropdown.children).filter((child): child is HTMLElement => isHTMLElement(child));
 				const saveWrapper = itemWrappers.find((itemWrapper) => {
 					const button = itemWrapper.querySelector(':scope > button');
 					const text = normalizeMenuText(button?.textContent ?? '');
@@ -2746,7 +2747,7 @@ export class DocxView extends FileView {
 				if (!duplicateWrapper) {
 					duplicateWrapper = sourceWrapper
 						? sourceWrapper.cloneNode(true) as HTMLElement
-						: document.createElement('div');
+						: activeDocument.createElement('div');
 					duplicateWrapper.dataset.docxidianDuplicateMenuItem = 'true';
 					duplicateWrapper.addClasses(['docxidian-file-menu-item', 'docxidian-duplicate-menu-item']);
 
@@ -2763,7 +2764,7 @@ export class DocxView extends FileView {
 						evt.preventDefault();
 						evt.stopImmediatePropagation();
 						evt.stopPropagation();
-						document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+						activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 						void this.duplicateCurrentDocument();
 					});
 
@@ -2778,12 +2779,12 @@ export class DocxView extends FileView {
 				if (!exportWrapper) {
 					exportWrapper = sourceWrapper
 						? sourceWrapper.cloneNode(true) as HTMLElement
-						: document.createElement('div');
+						: activeDocument.createElement('div');
 						exportWrapper.dataset.docxidianExportAsMenuItem = 'true';
 
 						let exportButton = exportWrapper.querySelector('button');
 					if (!exportButton) {
-						exportButton = document.createElement('button');
+						exportButton = activeDocument.createElement('button');
 						exportWrapper.appendChild(exportButton);
 					}
 						exportWrapper.addClasses(['docxidian-file-menu-item', 'docxidian-export-menu-item']);
@@ -2799,7 +2800,7 @@ export class DocxView extends FileView {
 						evt.preventDefault();
 						evt.stopImmediatePropagation();
 						evt.stopPropagation();
-						document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+						activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 						void this.exportCurrentDocumentAs();
 					});
 
@@ -2807,7 +2808,7 @@ export class DocxView extends FileView {
 					for (const format of DOCX_EXPORT_FORMATS) {
 						const optionWrapper = sourceWrapper
 							? sourceWrapper.cloneNode(true) as HTMLElement
-							: document.createElement('div');
+							: activeDocument.createElement('div');
 						optionWrapper.removeAttribute('data-docxidian-export-as-menu-item');
 							const optionButton = optionWrapper.querySelector('button') ?? optionWrapper.createEl('button');
 							optionButton.type = 'button';
@@ -2822,7 +2823,7 @@ export class DocxView extends FileView {
 							evt.preventDefault();
 							evt.stopImmediatePropagation();
 							evt.stopPropagation();
-							document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+							activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 							void this.exportCurrentDocumentAs(format.id);
 						});
 						exportSubmenu.appendChild(optionWrapper);
@@ -2840,7 +2841,7 @@ export class DocxView extends FileView {
 				if (!dropdown.querySelector('[data-docxidian-find-hidden-text-menu-item]')) {
 					const hiddenTextWrapper = sourceWrapper
 						? sourceWrapper.cloneNode(true) as HTMLElement
-						: document.createElement('div');
+						: activeDocument.createElement('div');
 						hiddenTextWrapper.dataset.docxidianFindHiddenTextMenuItem = 'true';
 						hiddenTextWrapper.addClasses(['docxidian-file-menu-item', 'docxidian-find-hidden-text-menu-item']);
 						const hiddenTextButton = hiddenTextWrapper.querySelector('button') ?? hiddenTextWrapper.createEl('button');
@@ -2856,7 +2857,7 @@ export class DocxView extends FileView {
 						evt.preventDefault();
 						evt.stopImmediatePropagation();
 						evt.stopPropagation();
-						document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+						activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 						void this.findHiddenText();
 					});
 
@@ -2902,7 +2903,7 @@ export class DocxView extends FileView {
 					}
 
 					const dropdown = Array.from(menuItem.children).find((child): child is HTMLElement => (
-						child instanceof HTMLElement
+						isHTMLElement(child)
 						&& child !== menuButton
 						&& Boolean(child.querySelector(':scope > div > button, :scope > button'))
 					));
@@ -2910,11 +2911,11 @@ export class DocxView extends FileView {
 						return;
 					}
 
-					const itemWrappers = Array.from(dropdown.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+					const itemWrappers = Array.from(dropdown.children).filter((child): child is HTMLElement => isHTMLElement(child));
 					const sourceWrapper = itemWrappers.find((itemWrapper) => itemWrapper.querySelector(':scope > button'));
 					const insertImageWrapper = sourceWrapper
 						? sourceWrapper.cloneNode(true) as HTMLElement
-						: document.createElement('div');
+						: activeDocument.createElement('div');
 					insertImageWrapper.dataset.docxidianInsertImageMenuItem = 'true';
 					insertImageWrapper.addClasses(['docxidian-file-menu-item', 'docxidian-insert-image-menu-item']);
 
@@ -2931,7 +2932,7 @@ export class DocxView extends FileView {
 						evt.preventDefault();
 						evt.stopImmediatePropagation();
 						evt.stopPropagation();
-						document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+						activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 						this.openImagePicker();
 					});
 
@@ -2987,7 +2988,7 @@ export class DocxView extends FileView {
 					}
 
 					const dropdown = Array.from(menuItem.children).find((child): child is HTMLElement => (
-						child instanceof HTMLElement
+						isHTMLElement(child)
 						&& child !== menuButton
 						&& Boolean(child.querySelector(':scope > div > button, :scope > button'))
 					));
@@ -3006,7 +3007,7 @@ export class DocxView extends FileView {
 						}
 
 						const wrapper = Array.from(dropdown.children).find((child): child is HTMLElement => (
-							child instanceof HTMLElement && child.contains(button)
+							isHTMLElement(child) && child.contains(button)
 						));
 						wrapper?.addClasses(['docxidian-file-menu-item', 'docxidian-native-menu-action-item']);
 						button.addClasses(['docxidian-file-menu-button', 'docxidian-native-menu-action-button']);
@@ -3031,8 +3032,8 @@ export class DocxView extends FileView {
 			return;
 		}
 
-		const markEditorHovering = () => document.body.classList.add('docxidian-editor-hovering');
-		const clearEditorHovering = () => document.body.classList.remove('docxidian-editor-hovering');
+			const markEditorHovering = () => activeDocument.body.classList.add('docxidian-editor-hovering');
+			const clearEditorHovering = () => activeDocument.body.classList.remove('docxidian-editor-hovering');
 
 		this.registerDomEvent(this.hostEl, 'pointerenter', markEditorHovering);
 		this.registerDomEvent(this.hostEl, 'pointerleave', clearEditorHovering);
@@ -3040,7 +3041,7 @@ export class DocxView extends FileView {
 	}
 
 	private registerEditorSaveInterceptor() {
-		this.registerDomEvent(document, 'click', (evt) => {
+		this.registerDomEvent(activeDocument, 'click', (evt) => {
 			if (
 				!this.hostEl
 				|| this.app.workspace.getActiveViewOfType(DocxView) !== this
@@ -3057,14 +3058,14 @@ export class DocxView extends FileView {
 	}
 
 	private registerEditorListAwareCopyInterceptor() {
-		this.registerDomEvent(document, 'copy', (evt) => {
+		this.registerDomEvent(activeDocument, 'copy', (evt) => {
 			if (!this.hostEl) {
 				return;
 			}
 
 			const targetInsideHost = evt.target instanceof Node && this.hostEl.contains(evt.target);
-			const activeInsideHost = document.activeElement instanceof Node && this.hostEl.contains(document.activeElement);
-			const selection = document.getSelection();
+			const activeInsideHost = activeDocument.activeElement instanceof Node && this.hostEl.contains(activeDocument.activeElement);
+			const selection = activeDocument.getSelection();
 			const selectionInsideHost = Boolean(
 				selection
 				&& !selection.isCollapsed
@@ -3087,13 +3088,13 @@ export class DocxView extends FileView {
 	}
 
 	private registerSaveShortcut() {
-		this.registerDomEvent(document, 'keydown', (evt) => {
+		this.registerDomEvent(activeDocument, 'keydown', (evt) => {
 			if (
 				!this.hostEl
 				|| evt.key.toLowerCase() !== 's'
 				|| (!evt.metaKey && !evt.ctrlKey)
-				|| !(document.activeElement instanceof Node)
-				|| !this.hostEl.contains(document.activeElement)
+				|| !(activeDocument.activeElement instanceof Node)
+				|| !this.hostEl.contains(activeDocument.activeElement)
 			) {
 				return;
 			}
@@ -3121,7 +3122,7 @@ export class DocxView extends FileView {
 		};
 
 		this.registerDomEvent(window, 'keydown', handleFindShortcut, true);
-		this.registerDomEvent(document, 'keydown', handleFindShortcut, true);
+		this.registerDomEvent(activeDocument, 'keydown', handleFindShortcut, true);
 	}
 
 	private isActiveDocxView() {
@@ -3138,7 +3139,7 @@ export class DocxView extends FileView {
 			return true;
 		}
 
-		const activeElement = document.activeElement;
+			const activeElement = activeDocument.activeElement;
 		return Boolean(activeElement instanceof Node && this.hostEl?.contains(activeElement));
 	}
 

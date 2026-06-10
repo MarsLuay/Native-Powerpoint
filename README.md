@@ -62,6 +62,8 @@ This plugin is desktop-only. It uses desktop Obsidian capabilities for Office ed
 
 ## Development
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, local setup notes, and release expectations.
+
 ```bash
 npm install
 npm run build

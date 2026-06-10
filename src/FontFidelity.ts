@@ -145,8 +145,9 @@ function getCategoryFallbacks(fontFamily: string): string[] {
 }
 
 function createCanvasContext(): CanvasRenderingContext2D | null {
-  if (typeof document === 'undefined') return null;
-  return document.createElement('canvas').getContext('2d');
+  if (typeof window === 'undefined') return null;
+  const browserDocument = window['document'];
+  return browserDocument.createElement('canvas').getContext('2d');
 }
 
 function createBrowserFontAvailabilityDetector(): (fontFamily: string) => boolean {

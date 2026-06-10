@@ -956,7 +956,7 @@ export class NativePowerPointView extends FileView {
       }
 
       if (!this.isActivePowerPointView()) return;
-      if (this.activeEditor && document.activeElement === this.activeEditor) return;
+      if (this.activeEditor && activeDocument.activeElement === this.activeEditor) return;
 
       const target = event.target instanceof Element ? event.target : null;
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) {
@@ -1031,12 +1031,12 @@ export class NativePowerPointView extends FileView {
     };
 
     this.registerDomEvent(window, 'keydown', handleKeyDown, true);
-    this.registerDomEvent(document, 'keydown', handleKeyDown, true);
+    this.registerDomEvent(activeDocument, 'keydown', handleKeyDown, true);
 
     this.registerDomEvent(window, 'resize', () => this.updateSlideScale());
-    this.registerDomEvent(document, 'pointermove', this.handleDragMove, true);
-    this.registerDomEvent(document, 'pointerup', this.handleDragEnd, true);
-    this.registerDomEvent(document, 'pointerdown', this.handleOutsideSlidePointerDown, true);
+    this.registerDomEvent(activeDocument, 'pointermove', this.handleDragMove, true);
+    this.registerDomEvent(activeDocument, 'pointerup', this.handleDragEnd, true);
+    this.registerDomEvent(activeDocument, 'pointerdown', this.handleOutsideSlidePointerDown, true);
   }
 
   private isActivePowerPointView(): boolean {
@@ -1053,7 +1053,7 @@ export class NativePowerPointView extends FileView {
       return true;
     }
 
-    const activeElement = document.activeElement;
+    const activeElement = activeDocument.activeElement;
     return Boolean(activeElement instanceof Node && this.contentEl.contains(activeElement));
   }
 
@@ -1896,9 +1896,9 @@ export class NativePowerPointView extends FileView {
       this.stopInlineSelectionDrag();
     };
     const cleanup = () => {
-      document.removeEventListener('pointermove', onPointerMove, true);
-      document.removeEventListener('pointerup', onPointerUp, true);
-      document.removeEventListener('pointercancel', onPointerUp, true);
+      activeDocument.removeEventListener('pointermove', onPointerMove, true);
+      activeDocument.removeEventListener('pointerup', onPointerUp, true);
+      activeDocument.removeEventListener('pointercancel', onPointerUp, true);
     };
 
     this.inlineSelectionDrag = {
@@ -1911,9 +1911,9 @@ export class NativePowerPointView extends FileView {
       isSelecting: false,
       cleanup
     };
-    document.addEventListener('pointermove', onPointerMove, true);
-    document.addEventListener('pointerup', onPointerUp, true);
-    document.addEventListener('pointercancel', onPointerUp, true);
+    activeDocument.addEventListener('pointermove', onPointerMove, true);
+    activeDocument.addEventListener('pointerup', onPointerUp, true);
+    activeDocument.addEventListener('pointercancel', onPointerUp, true);
   }
 
   private extendInlineSelectionDrag(event: PointerEvent): void {
@@ -1957,7 +1957,7 @@ export class NativePowerPointView extends FileView {
   }
 
   private clearBrowserTextSelection(): void {
-    document.getSelection()?.removeAllRanges();
+    activeDocument.getSelection()?.removeAllRanges();
   }
 
   private handleOutsideSlidePointerDown = (event: PointerEvent): void => {
@@ -2083,7 +2083,7 @@ export class NativePowerPointView extends FileView {
     this.activeEditor = editor;
     if (target) {
       this.removeSelectionOverlay();
-      this.activeInlineCaret = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      this.activeInlineCaret = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'line');
       this.activeInlineCaret.classList.add('native-powerpoint-svg-caret');
       this.activeInlineCaret.setAttribute('aria-hidden', 'true');
       this.svgEl?.appendChild(this.activeInlineCaret);
@@ -2425,7 +2425,7 @@ export class NativePowerPointView extends FileView {
     if (!textElement || !parent) return;
 
     for (const box of boxes) {
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const rect = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rect.classList.add('native-powerpoint-svg-selection');
       rect.setAttribute('x', this.formatSvgNumber(box.x));
       rect.setAttribute('y', this.formatSvgNumber(box.y));
@@ -2609,7 +2609,7 @@ export class NativePowerPointView extends FileView {
     if (text.length === 0) return { left: box.left, ...row };
 
     const style = window.getComputedStyle(editor);
-    const canvas = document.createElement('canvas');
+    const canvas = activeDocument.createElement('canvas');
     const context = canvas.getContext('2d');
     if (!context) {
       return { left: box.left + box.width * (offset / text.length), ...row };
@@ -2737,7 +2737,7 @@ export class NativePowerPointView extends FileView {
     const text = editor.value;
     const clickOffset = Math.max(0, Math.min(box.width, localClientX - box.left));
     const style = window.getComputedStyle(editor);
-    const canvas = document.createElement('canvas');
+    const canvas = activeDocument.createElement('canvas');
     const context = canvas.getContext('2d');
     if (!context) {
       return Math.round(text.length * (clickOffset / box.width));

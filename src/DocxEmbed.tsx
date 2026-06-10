@@ -4,6 +4,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { DocxEditor } from '@eigenpal/docx-editor-react';
 import type { Translations } from '@eigenpal/docx-editor-i18n';
 import { ensureEditorStyles } from './DocxReactView';
+import { isHTMLElement } from './domGuards';
 import { Component, MarkdownRenderChild } from './obsidianRuntime';
 
 const DOCX_EMBED_SELECTOR = '.internal-embed[src], .internal-embed[data-src]';
@@ -301,7 +302,7 @@ export function renderDocxEmbeds(
 	const embeds = collectEmbedElements(el);
 
 	for (const embedEl of embeds) {
-		if (!(embedEl instanceof HTMLElement) || embedEl.dataset.docxidianEmbed === 'true') {
+		if (!isHTMLElement(embedEl) || embedEl.dataset.docxidianEmbed === 'true') {
 			continue;
 		}
 

@@ -77,7 +77,7 @@ export async function pasteSlideObject(
   const clonedShape = destinationSlideDocument.importNode(
     getShapeElement(sourceSlideDocument, clipboard.shapeIndex),
     true
-  ) as Element;
+  );
 
   offsetShape(clonedShape, offsetEmu, offsetEmu);
   assignUniqueNonVisualIds(destinationSlideDocument, clonedShape);
@@ -194,7 +194,7 @@ async function copyShapeRelationships(
     const sourceRelationship = findRelationship(sourceRelationships, attribute.value);
     if (!sourceRelationship) continue;
 
-    const clonedRelationship = destinationRelationships.importNode(sourceRelationship, true) as Element;
+    const clonedRelationship = destinationRelationships.importNode(sourceRelationship, true);
     const relationshipId = getNextRelationshipId(destinationRelationships);
     clonedRelationship.setAttribute('Id', relationshipId);
     attribute.value = relationshipId;

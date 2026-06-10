@@ -1,0 +1,31 @@
+type InstanceOfCapable = {
+	instanceOf: (constructor: unknown) => boolean;
+};
+
+type DomConstructor<T> = Function & {
+	prototype: T;
+};
+
+function hasInstanceOf(value: unknown): value is InstanceOfCapable {
+	return (
+		(typeof value === 'object' || typeof value === 'function')
+		&& value !== null
+		&& typeof (value as Partial<InstanceOfCapable>).instanceOf === 'function'
+	);
+}
+
+function isDomInstance<T>(value: unknown, constructor: DomConstructor<T>): value is T {
+	if ((typeof value !== 'object' && typeof value !== 'function') || value === null) {
+		return false;
+	}
+
+	if (hasInstanceOf(value)) {
+		return value.instanceOf(constructor);
+	}
+
+	return Function.prototype[Symbol.hasInstance].call(constructor, value);
+}
+
+export function isHTMLElement(value: unknown): value is HTMLElement {
+	return typeof HTMLElement !== 'undefined' && isDomInstance(value, HTMLElement);
+}

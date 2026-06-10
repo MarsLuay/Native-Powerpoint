@@ -116,7 +116,7 @@
 	transform: var(--docxidian-fixed-correction) var(--docxidian-existing-transform, none);
 }
 
-.docxidian-host .ep-root [style*='position: fixed']:has(> [role='dialog']) {
+.docxidian-host .ep-root .docxidian-fixed-dialog-layer {
 	inset: 0 !important;
 	transform: none !important;
 }
@@ -239,8 +239,8 @@ body [data-docxidian-mode-menu='true'].docxidian-mode-menu-normalized {
 body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-item {
 	align-items: center;
 	box-shadow: none !important;
-	column-gap: 10px;
 	display: grid !important;
+	gap: 0 10px;
 	grid-template-columns: 24px minmax(0, 1fr) 20px;
 	justify-content: start;
 	justify-items: start;
@@ -786,7 +786,7 @@ body.theme-dark
 
 .workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
-	.ep-root:has([role='menubar'] [style*='position: fixed'], [role='menubar'] [style*='position: absolute'])
+	.ep-root.docxidian-has-floating-menu
 	.docx-outline-nav {
 	opacity: 0 !important;
 	pointer-events: none !important;
@@ -1704,12 +1704,10 @@ body.theme-dark .docxidian-hidden-text-snippet {
 
 .native-powerpoint-canvas-pane {
 	align-items: center;
-	align-items: safe center;
 	background: var(--background-primary);
 	display: flex;
 	flex: 1 1 auto;
 	justify-content: center;
-	justify-content: safe center;
 	min-height: 0;
 	overflow: auto;
 	padding: 28px;
@@ -1868,7 +1866,6 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	padding: 0 2px;
 	pointer-events: none;
 	resize: none;
-	scrollbar-width: none;
 	-webkit-text-fill-color: transparent;
 }
 

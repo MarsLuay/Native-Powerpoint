@@ -1,6 +1,7 @@
 import { App, Component, MarkdownPostProcessorContext, MarkdownRenderChild, Plugin, TFile } from 'obsidian';
 import type { Translations } from '@eigenpal/docx-editor-i18n';
 import { loadDocxEditorChunk } from './docxEditorLoader';
+import { isHTMLElement } from './domGuards';
 import { debugLog, errorLog, infoLog, warnLog } from './logger';
 
 const DOCX_EMBED_SELECTOR = '.internal-embed[src], .internal-embed[data-src]';
@@ -50,7 +51,7 @@ function collectEmbedElements(el: HTMLElement) {
 
 function hasRenderableDocxEmbed(app: App, el: HTMLElement, ctx: MarkdownPostProcessorContext) {
 	return collectEmbedElements(el).some((embedEl) => {
-		if (!(embedEl instanceof HTMLElement) || embedEl.dataset.docxidianEmbed === 'true') {
+		if (!isHTMLElement(embedEl) || embedEl.dataset.docxidianEmbed === 'true') {
 			return false;
 		}
 

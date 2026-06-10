@@ -25,6 +25,7 @@ const originalConsole = {
 };
 const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
 const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'window');
+const originalActiveDocumentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'activeDocument');
 const capturedLogs = [];
 let copiedClipboardText = '';
 const DEFAULT_PLUGIN_DATA = {
@@ -43,6 +44,35 @@ const DEFAULT_PLUGIN_DATA = {
 	showRuler: false,
 };
 let pluginData = { ...DEFAULT_PLUGIN_DATA };
+
+function createActiveDocumentStub() {
+	return {
+		activeElement: null,
+		addEventListener() {},
+		adoptedStyleSheets: [],
+		body: {
+			appendChild() {},
+			classList: {
+				add() {},
+				remove() {},
+				toggle() {},
+			},
+		},
+		createElement() {
+			return {};
+		},
+		dispatchEvent() {
+			return true;
+		},
+		querySelector() {
+			return null;
+		},
+		querySelectorAll() {
+			return [];
+		},
+		removeEventListener() {},
+	};
+}
 
 function resolvePluginDir() {
 	if (process.env.DOCXIDIAN_PLUGIN_DIR) {
@@ -67,6 +97,8 @@ function captureConsole(level) {
 }
 
 function createObsidianStub() {
+	const activeDocument = globalThis.activeDocument ?? createActiveDocumentStub();
+
 	class Component {
 		addChild(child) {
 			return child;
@@ -155,6 +187,7 @@ function createObsidianStub() {
 	class TFile {}
 
 	return {
+		activeDocument,
 		App: class App {},
 		Component,
 		FileView,
@@ -265,6 +298,11 @@ function restoreEnvironment() {
 	} else {
 		delete globalThis.window;
 	}
+	if (originalActiveDocumentDescriptor) {
+		Object.defineProperty(globalThis, 'activeDocument', originalActiveDocumentDescriptor);
+	} else {
+		delete globalThis.activeDocument;
+	}
 	if (temporaryPluginDir) {
 		fs.rmSync(temporaryPluginDir, { recursive: true, force: true });
 		temporaryPluginDir = null;
@@ -331,6 +369,10 @@ async function runSmoke() {
 				return 0;
 			},
 		},
+	});
+	Object.defineProperty(globalThis, 'activeDocument', {
+		configurable: true,
+		value: createActiveDocumentStub(),
 	});
 
 	assertPluginFiles();

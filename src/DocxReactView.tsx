@@ -384,6 +384,17 @@ function markLightMenuSurface(surface: HTMLElement, className: string) {
 	}
 }
 
+function normalizeEditorFloatingLayers(editorRoot: HTMLElement) {
+	activeDocument.querySelectorAll<HTMLElement>('div[style*="position: fixed"]').forEach((layer) => {
+		layer.classList.toggle('docxidian-fixed-dialog-layer', Boolean(layer.querySelector(':scope > [role="dialog"]')));
+	});
+
+	const hasFloatingMenu = Boolean(
+		editorRoot.querySelector('[role="menubar"] [style*="position: fixed"], [role="menubar"] [style*="position: absolute"]'),
+	);
+	editorRoot.classList.toggle('docxidian-has-floating-menu', hasFloatingMenu);
+}
+
 function isFontDropdownListbox(listbox: HTMLElement) {
 	const optionLabels = Array.from(listbox.querySelectorAll<HTMLElement>('[role="option"]'))
 		.map((option) => option.textContent?.replace(/\s+/g, ' ').trim().toLowerCase() ?? '')
@@ -401,12 +412,12 @@ function appendImportFontOption(listbox: HTMLElement, onImportFont: () => void) 
 		return;
 	}
 
-	const separator = document.createElement('div');
+	const separator = activeDocument.createElement('div');
 	separator.className = 'docxidian-import-font-separator';
 	separator.setAttribute('role', 'separator');
 	separator.dataset.docxidianImportFontOption = 'true';
 
-	const button = document.createElement('button');
+	const button = activeDocument.createElement('button');
 	button.type = 'button';
 	button.className = 'docxidian-import-font-option';
 	button.dataset.docxidianImportFontOption = 'true';
@@ -418,7 +429,7 @@ function appendImportFontOption(listbox: HTMLElement, onImportFont: () => void) 
 		evt.preventDefault();
 		evt.stopImmediatePropagation();
 		evt.stopPropagation();
-		document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		onImportFont();
 	};
 
@@ -468,12 +479,12 @@ function appendCustomTableOption(grid: HTMLElement, onCustomTable: () => void) {
 
 	markLightMenuSurface(container, 'docxidian-table-size-menu');
 
-	const separator = document.createElement('div');
+	const separator = activeDocument.createElement('div');
 	separator.className = 'docxidian-custom-table-separator';
 	separator.setAttribute('role', 'separator');
 	separator.dataset.docxidianCustomTableOption = 'true';
 
-	const button = document.createElement('button');
+	const button = activeDocument.createElement('button');
 	button.type = 'button';
 	button.className = 'docxidian-custom-table-option';
 	button.dataset.docxidianCustomTableOption = 'true';
@@ -483,7 +494,7 @@ function appendCustomTableOption(grid: HTMLElement, onCustomTable: () => void) {
 		evt.preventDefault();
 		evt.stopImmediatePropagation();
 		evt.stopPropagation();
-		document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+		activeDocument.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		onCustomTable();
 	};
 
@@ -1035,7 +1046,7 @@ export function ensureEditorStyles() {
 
 	const styleSheet = new CSSStyleSheet();
 	styleSheet.replaceSync(editorStyles);
-	document.adoptedStyleSheets = [...document.adoptedStyleSheets, styleSheet];
+	activeDocument.adoptedStyleSheets = [...activeDocument.adoptedStyleSheets, styleSheet];
 	stylesInjected = true;
 }
 
@@ -1407,7 +1418,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	}, []);
 
 	const syncListMarkerSelectionHighlights = useCallback(() => {
-		const root = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+		const root = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 		const view = editorRef.current?.getEditorRef()?.getView();
 		if (!root || !view) {
 			return;
@@ -1513,7 +1524,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 
 	useEffect(() => {
 		const handleFindShortcut = (evt: KeyboardEvent) => {
-			const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+			const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 			const key = evt.key.toLowerCase();
 			const isFindShortcut = isPrimaryShortcut(evt, 'f');
 			const isReplaceShortcut = !Platform.isMacOS && key === 'h' && evt.ctrlKey && !evt.metaKey && !evt.altKey && !evt.shiftKey;
@@ -1521,7 +1532,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 				!editorRoot
 				|| (!isFindShortcut && !isReplaceShortcut)
 				|| !(evt.target instanceof Node)
-				|| (!editorRoot.contains(evt.target) && !document.querySelector('.docxidian-find-dialog')?.contains(evt.target))
+				|| (!editorRoot.contains(evt.target) && !activeDocument.querySelector('.docxidian-find-dialog')?.contains(evt.target))
 			) {
 				return;
 			}
@@ -1531,8 +1542,8 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			openFindReplaceDialog(isFindShortcut ? 'find' : 'replace');
 		};
 
-		document.addEventListener('keydown', handleFindShortcut, true);
-		return () => document.removeEventListener('keydown', handleFindShortcut, true);
+		activeDocument.addEventListener('keydown', handleFindShortcut, true);
+		return () => activeDocument.removeEventListener('keydown', handleFindShortcut, true);
 	}, [openFindReplaceDialog]);
 
 	const moveFindMatch = useCallback((direction: 1 | -1) => {
@@ -1574,12 +1585,13 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	}, [findMatchCase, findMatches, findReplaceText, findSearchText, findWholeWord, refreshFindMatches]);
 
 	const normalizeEditorModeDropdown = useCallback(() => {
-		const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+		const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 		if (!editorRoot) {
 			return;
 		}
 
-		const modeMenus = Array.from(document.querySelectorAll<HTMLElement>('div[style*="position: fixed"]'))
+		normalizeEditorFloatingLayers(editorRoot);
+		const modeMenus = Array.from(activeDocument.querySelectorAll<HTMLElement>('div[style*="position: fixed"]'))
 			.map((menu) => ({
 				menu,
 				buttons: Array.from(menu.querySelectorAll<HTMLButtonElement>(':scope > button'))
@@ -1622,14 +1634,14 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	}, []);
 
 	useEffect(() => {
-		const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+		const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 		if (!editorRoot) {
 			return;
 		}
 
 		normalizeEditorModeDropdown();
 		const observer = new MutationObserver(normalizeEditorModeDropdown);
-		observer.observe(document.body, {
+		observer.observe(activeDocument.body, {
 			childList: true,
 			subtree: true,
 		});
@@ -1639,7 +1651,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 
 	useEffect(() => {
 		const handleModePointerDown = (evt: PointerEvent) => {
-			const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+			const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 			if (!editorRoot || !(evt.target instanceof Element)) {
 				return;
 			}
@@ -1659,8 +1671,8 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			}
 		};
 
-		document.addEventListener('pointerdown', handleModePointerDown, true);
-		return () => document.removeEventListener('pointerdown', handleModePointerDown, true);
+		activeDocument.addEventListener('pointerdown', handleModePointerDown, true);
+		return () => activeDocument.removeEventListener('pointerdown', handleModePointerDown, true);
 	}, [setMode]);
 
 	const clearAutosaveTimeout = useCallback(() => {
@@ -1690,7 +1702,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		const pageHeight = sectionProperties.pageHeight ?? DEFAULT_PAGE_HEIGHT_TWIPS;
 		const topMargin = sectionProperties.marginTop ?? DEFAULT_MARGIN_TWIPS;
 		const bottomMargin = sectionProperties.marginBottom ?? DEFAULT_MARGIN_TWIPS;
-		const ruler = document.querySelector<HTMLElement>(`.${editorClassNameRef.current} .docx-vertical-ruler`);
+		const ruler = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current} .docx-vertical-ruler`);
 
 		if (!ruler || pageHeight <= 0) {
 			return;
@@ -1740,7 +1752,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	}, []);
 
 	const centerInitialDocumentViewport = useCallback(() => {
-		const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+		const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 		if (!editorRoot) {
 			return false;
 		}
@@ -1784,7 +1796,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			return;
 		}
 
-		const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+		const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 		if (!editorRoot) {
 			return;
 		}
@@ -2023,32 +2035,32 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			}
 		};
 
-		document.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
-		document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
-		document.addEventListener('touchend', handleTouchEnd, { passive: true, capture: true });
-		document.addEventListener('touchcancel', handleTouchEnd, { passive: true, capture: true });
-		document.addEventListener('gesturestart', handleGestureStart, { passive: false, capture: true });
-		document.addEventListener('gesturechange', handleGestureChange, { passive: false, capture: true });
-		document.addEventListener('gestureend', handleGestureEnd, { passive: true, capture: true });
-		document.addEventListener('pointerdown', handlePointerDown, { passive: false, capture: true });
-		document.addEventListener('pointermove', handlePointerMove, { passive: false, capture: true });
-		document.addEventListener('pointerup', handlePointerEnd, { passive: true, capture: true });
-		document.addEventListener('pointercancel', handlePointerEnd, { passive: true, capture: true });
+		activeDocument.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
+		activeDocument.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+		activeDocument.addEventListener('touchend', handleTouchEnd, { passive: true, capture: true });
+		activeDocument.addEventListener('touchcancel', handleTouchEnd, { passive: true, capture: true });
+		activeDocument.addEventListener('gesturestart', handleGestureStart, { passive: false, capture: true });
+		activeDocument.addEventListener('gesturechange', handleGestureChange, { passive: false, capture: true });
+		activeDocument.addEventListener('gestureend', handleGestureEnd, { passive: true, capture: true });
+		activeDocument.addEventListener('pointerdown', handlePointerDown, { passive: false, capture: true });
+		activeDocument.addEventListener('pointermove', handlePointerMove, { passive: false, capture: true });
+		activeDocument.addEventListener('pointerup', handlePointerEnd, { passive: true, capture: true });
+		activeDocument.addEventListener('pointercancel', handlePointerEnd, { passive: true, capture: true });
 
 		return () => {
 			editorRoot.removeClass('docxidian-touch-pinch-root');
 			hostRoot.removeClass('docxidian-touch-pinch-root');
-			document.removeEventListener('touchstart', handleTouchStart, true);
-			document.removeEventListener('touchmove', handleTouchMove, true);
-			document.removeEventListener('touchend', handleTouchEnd, true);
-			document.removeEventListener('touchcancel', handleTouchEnd, true);
-			document.removeEventListener('gesturestart', handleGestureStart, true);
-			document.removeEventListener('gesturechange', handleGestureChange, true);
-			document.removeEventListener('gestureend', handleGestureEnd, true);
-			document.removeEventListener('pointerdown', handlePointerDown, true);
-			document.removeEventListener('pointermove', handlePointerMove, true);
-			document.removeEventListener('pointerup', handlePointerEnd, true);
-			document.removeEventListener('pointercancel', handlePointerEnd, true);
+			activeDocument.removeEventListener('touchstart', handleTouchStart, true);
+			activeDocument.removeEventListener('touchmove', handleTouchMove, true);
+			activeDocument.removeEventListener('touchend', handleTouchEnd, true);
+			activeDocument.removeEventListener('touchcancel', handleTouchEnd, true);
+			activeDocument.removeEventListener('gesturestart', handleGestureStart, true);
+			activeDocument.removeEventListener('gesturechange', handleGestureChange, true);
+			activeDocument.removeEventListener('gestureend', handleGestureEnd, true);
+			activeDocument.removeEventListener('pointerdown', handlePointerDown, true);
+			activeDocument.removeEventListener('pointermove', handlePointerMove, true);
+			activeDocument.removeEventListener('pointerup', handlePointerEnd, true);
+			activeDocument.removeEventListener('pointercancel', handlePointerEnd, true);
 			pinchZoomStateRef.current = null;
 			activeTouchPointersRef.current.clear();
 			if (pinchZoomScrollFrameRef.current !== null) {
@@ -2168,7 +2180,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	}, [clearAutosaveTimeout, file]);
 
 	const exportRenderedPdfBuffer = useCallback(async () => {
-		const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+		const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 		if (!editorRoot) {
 			warnLog('export', 'Could not export rendered PDF because the editor root is missing', {
 				editorClassName: editorClassNameRef.current,
@@ -2274,7 +2286,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	}, []);
 
 	const decorateTableSizeDropdown = useCallback(() => {
-		document.querySelectorAll<HTMLElement>('[role="grid"]').forEach((grid) => {
+		activeDocument.querySelectorAll<HTMLElement>('[role="grid"]').forEach((grid) => {
 			if (isTableSizeGrid(grid)) {
 				appendCustomTableOption(grid, openCustomTableDialog);
 			}
@@ -2284,7 +2296,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	useEffect(() => {
 		decorateTableSizeDropdown();
 		const observer = new MutationObserver(decorateTableSizeDropdown);
-		observer.observe(document.body, {
+		observer.observe(activeDocument.body, {
 			childList: true,
 			subtree: true,
 		});
@@ -2417,7 +2429,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	}, []);
 
 	const decorateFontDropdown = useCallback(() => {
-		document.querySelectorAll<HTMLElement>('[role="listbox"]').forEach((listbox) => {
+		activeDocument.querySelectorAll<HTMLElement>('[role="listbox"]').forEach((listbox) => {
 			if (isFontDropdownListbox(listbox)) {
 				appendImportFontOption(listbox, openFontPicker);
 			}
@@ -2427,7 +2439,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 	useEffect(() => {
 		decorateFontDropdown();
 		const observer = new MutationObserver(decorateFontDropdown);
-		observer.observe(document.body, {
+		observer.observe(activeDocument.body, {
 			childList: true,
 			subtree: true,
 		});
@@ -2450,7 +2462,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 				return null;
 			}
 
-			const editorRoot = document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+			const editorRoot = activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 			if (!editorRoot?.contains(stepTarget.button)) {
 				return null;
 			}
@@ -2505,23 +2517,23 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			applyFontSizeStepToSelection(stepTarget.direction, getFontSizeControl(stepTarget.button));
 		};
 
-		document.addEventListener('pointerdown', handlePressStart, true);
-		document.addEventListener('mousedown', handleMouseDown, true);
-		document.addEventListener('click', handleClick, true);
-		document.addEventListener('keydown', handleKeyDown, true);
-		document.addEventListener('pointerup', stopFontSizeHold, true);
-		document.addEventListener('pointercancel', stopFontSizeHold, true);
-		document.addEventListener('mouseup', stopFontSizeHold, true);
+		activeDocument.addEventListener('pointerdown', handlePressStart, true);
+		activeDocument.addEventListener('mousedown', handleMouseDown, true);
+		activeDocument.addEventListener('click', handleClick, true);
+		activeDocument.addEventListener('keydown', handleKeyDown, true);
+		activeDocument.addEventListener('pointerup', stopFontSizeHold, true);
+		activeDocument.addEventListener('pointercancel', stopFontSizeHold, true);
+		activeDocument.addEventListener('mouseup', stopFontSizeHold, true);
 		window.addEventListener('blur', stopFontSizeHold);
 
 		return () => {
-			document.removeEventListener('pointerdown', handlePressStart, true);
-			document.removeEventListener('mousedown', handleMouseDown, true);
-			document.removeEventListener('click', handleClick, true);
-			document.removeEventListener('keydown', handleKeyDown, true);
-			document.removeEventListener('pointerup', stopFontSizeHold, true);
-			document.removeEventListener('pointercancel', stopFontSizeHold, true);
-			document.removeEventListener('mouseup', stopFontSizeHold, true);
+			activeDocument.removeEventListener('pointerdown', handlePressStart, true);
+			activeDocument.removeEventListener('mousedown', handleMouseDown, true);
+			activeDocument.removeEventListener('click', handleClick, true);
+			activeDocument.removeEventListener('keydown', handleKeyDown, true);
+			activeDocument.removeEventListener('pointerup', stopFontSizeHold, true);
+			activeDocument.removeEventListener('pointercancel', stopFontSizeHold, true);
+			activeDocument.removeEventListener('mouseup', stopFontSizeHold, true);
 			window.removeEventListener('blur', stopFontSizeHold);
 			stopFontSizeHold();
 		};
@@ -2575,10 +2587,10 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			}
 
 			removeTooltip();
-			const tooltip = document.createElement('div');
+			const tooltip = activeDocument.createElement('div');
 			tooltip.className = 'docxidian-toolbar-tooltip';
 			tooltip.textContent = label;
-			document.body.appendChild(tooltip);
+			activeDocument.body.appendChild(tooltip);
 			tooltipEl = tooltip;
 			positionTooltip(target, tooltip);
 		};
@@ -2599,7 +2611,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			}, TOOLBAR_TOOLTIP_DELAY_MS);
 		};
 
-		const getEditorRoot = () => document.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
+		const getEditorRoot = () => activeDocument.querySelector<HTMLElement>(`.${editorClassNameRef.current}`);
 
 		const handlePointerOver = (evt: PointerEvent) => {
 			const target = getToolbarTooltipTarget(evt.target, getEditorRoot());
@@ -2620,16 +2632,16 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 			hideTooltip();
 		};
 
-		document.addEventListener('pointerover', handlePointerOver, true);
-		document.addEventListener('pointerout', handlePointerOut, true);
-		document.addEventListener('scroll', handleScrollOrResize, true);
+		activeDocument.addEventListener('pointerover', handlePointerOver, true);
+		activeDocument.addEventListener('pointerout', handlePointerOut, true);
+		activeDocument.addEventListener('scroll', handleScrollOrResize, true);
 		window.addEventListener('resize', handleScrollOrResize);
 		window.addEventListener('blur', hideTooltip);
 
 		return () => {
-			document.removeEventListener('pointerover', handlePointerOver, true);
-			document.removeEventListener('pointerout', handlePointerOut, true);
-			document.removeEventListener('scroll', handleScrollOrResize, true);
+			activeDocument.removeEventListener('pointerover', handlePointerOver, true);
+			activeDocument.removeEventListener('pointerout', handlePointerOut, true);
+			activeDocument.removeEventListener('scroll', handleScrollOrResize, true);
 			window.removeEventListener('resize', handleScrollOrResize);
 			window.removeEventListener('blur', hideTooltip);
 			hideTooltip();

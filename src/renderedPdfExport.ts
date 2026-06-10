@@ -66,8 +66,8 @@ function toCdata(value: string) {
 }
 
 function serializeElementForSvg(element: HTMLElement) {
-	const cloneDocument = document.implementation.createHTMLDocument('docxidian-pdf-export');
-	const importedElement = cloneDocument.importNode(element, true) as HTMLElement;
+	const cloneDocument = activeDocument.implementation.createHTMLDocument('docxidian-pdf-export');
+	const importedElement = cloneDocument.importNode(element, true);
 	importedElement.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
 	return new XMLSerializer().serializeToString(importedElement);
 }
@@ -85,8 +85,8 @@ function assertSvgCanParse(svg: string) {
 function collectPageExportCss() {
 	let css = '';
 	const styleSheets = [
-		...Array.from(document.styleSheets),
-		...Array.from(document.adoptedStyleSheets ?? []),
+		...Array.from(activeDocument.styleSheets),
+		...Array.from(activeDocument.adoptedStyleSheets ?? []),
 	];
 	for (const sheet of styleSheets) {
 		try {
@@ -127,7 +127,7 @@ function formatPdfNumber(value: number) {
 let renderedPdfMeasureCanvas: HTMLCanvasElement | null = null;
 
 function measureRenderedPdfTextCssWidth(text: string, fontSizePx: number, fontFamily: string, fontWeight: string, fontStyle: string) {
-	renderedPdfMeasureCanvas ??= document.createElement('canvas');
+	renderedPdfMeasureCanvas ??= activeDocument.createElement('canvas');
 	const context = renderedPdfMeasureCanvas.getContext('2d');
 	if (!context) {
 		return 0;
@@ -354,7 +354,7 @@ function collectTextNodePdfRuns(textNode: Text, page: HTMLElement, pageRect: DOM
 		const token = match[0];
 		const start = match.index;
 		const end = start + token.length;
-		const range = document.createRange();
+		const range = activeDocument.createRange();
 		try {
 			range.setStart(textNode, start);
 			range.setEnd(textNode, end);
@@ -389,7 +389,7 @@ function collectWholeTextNodePdfRun(textNode: Text, page: HTMLElement, pageRect:
 
 	const style = window.getComputedStyle(parent);
 	const fontSizePx = parseCssPixelValue(style.fontSize) || 12;
-	const range = document.createRange();
+	const range = activeDocument.createRange();
 	try {
 		range.setStart(textNode, 0);
 		range.setEnd(textNode, text.length);
@@ -480,7 +480,7 @@ function collectRenderedPdfTextRuns(page: HTMLElement, pdfWidth: number, pdfHeig
 	const runs: RenderedPdfTextRun[] = collectRenderedSpanPdfRuns(page, pageRect, pdfWidth, pdfHeight);
 
 	if (runs.length === 0) {
-		const walker = document.createTreeWalker(page, NodeFilter.SHOW_TEXT);
+		const walker = activeDocument.createTreeWalker(page, NodeFilter.SHOW_TEXT);
 		let node = walker.nextNode();
 
 		while (node && runs.length < RENDERED_PDF_MAX_TEXT_RUNS_PER_PAGE) {
@@ -573,8 +573,8 @@ async function renderPageElementToCanvasJpeg(page: HTMLElement) {
 		useCORS: true,
 		width: pageWidth,
 		height: pageHeight,
-		windowWidth: Math.max(document.documentElement.clientWidth, pageWidth),
-		windowHeight: Math.max(document.documentElement.clientHeight, pageHeight),
+		windowWidth: Math.max(activeDocument.documentElement.clientWidth, pageWidth),
+		windowHeight: Math.max(activeDocument.documentElement.clientHeight, pageHeight),
 		onclone: (_clonedDocument, clonedPage) => {
 			clonedPage.classList.add('docxidian-pdf-export-page');
 			clonedPage.querySelectorAll<HTMLElement>(`.${SELECTED_LIST_MARKER_CLASS}`).forEach((marker) => {
@@ -630,7 +630,7 @@ async function renderPageElementToSvgJpeg(page: HTMLElement, editorRoot: HTMLEle
 	const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
 	try {
 		const image = await loadImageFromUrl(svgUrl);
-		const canvas = document.createElement('canvas');
+		const canvas = activeDocument.createElement('canvas');
 		canvas.width = Math.max(1, Math.round(pageWidth * RENDERED_PDF_EXPORT_SCALE));
 		canvas.height = Math.max(1, Math.round(pageHeight * RENDERED_PDF_EXPORT_SCALE));
 		const context = canvas.getContext('2d');
@@ -760,7 +760,7 @@ function createRenderedImagePdf(pages: RenderedPdfImagePage[]) {
 }
 
 export async function exportRenderedPagesToPdf(editorRoot: HTMLElement, renderedPagesContainer?: HTMLElement | null) {
-	await document.fonts?.ready;
+	await activeDocument.fonts?.ready;
 	const pagesContainer = renderedPagesContainer?.isConnected ? renderedPagesContainer : editorRoot.querySelector<HTMLElement>('.paged-editor__pages');
 	const candidateContainers = dedupeElements([
 		...(pagesContainer ? [pagesContainer] : []),

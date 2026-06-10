@@ -85,6 +85,12 @@ export function loadNativePowerPointViewModule() {
   ).then((outfile) => {
     const notices = [];
     const originalLoad = Module._load;
+    globalThis.activeDocument ??= {
+      activeElement: null,
+      addEventListener() {},
+      body: { classList: { add() {}, remove() {}, toggle() {} } },
+      removeEventListener() {},
+    };
 
     class Notice {
       constructor(message, duration) {
@@ -107,6 +113,12 @@ export function loadNativePowerPointViewModule() {
     Module._load = function load(request, parent, isMain) {
       if (request === "obsidian") {
         return {
+          activeDocument: {
+            activeElement: null,
+            addEventListener() {},
+            body: { classList: { add() {}, remove() {}, toggle() {} } },
+            removeEventListener() {},
+          },
           FileView,
           Notice,
           normalizePath: (value) => value.replace(/\\/g, "/").replace(/\/{2,}/g, "/"),
