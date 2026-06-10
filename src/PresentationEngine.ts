@@ -14,6 +14,7 @@ import type { ShapeTransform } from 'pptx-svg';
 import wasmBytes from 'pptx-svg/wasm';
 import {
   getChartDataDescriptor,
+  updateChartTextLabel as patchChartTextLabel,
   updateChartData as patchChartData,
   type ChartDataDescriptor,
   type ChartDataGrid,
@@ -972,6 +973,13 @@ export class PresentationEngine {
       setDrawingText(cell, text);
       modifications.set(slidePath, serializeXml(slideDoc));
     } else {
+      const descriptor = this.chartDataDescriptors.get(this.getChartTextKey(slideIndex, shapeIndex));
+      if (descriptor) {
+        const patchedExport = await patchChartTextLabel(rawExport, descriptor, edit.previousText, edit.occurrence, text);
+        await this.reloadFromBuffer(patchedExport, this.slideCountValue);
+        return;
+      }
+
       const chartPath = findChartPartPath(zip.textFiles, slideIndex, shapeIndex);
       const chartXml = zip.textFiles.get(chartPath);
       if (!chartXml) {

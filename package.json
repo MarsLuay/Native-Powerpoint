@@ -10,6 +10,7 @@
 		"smoke": "node scripts/smoke-docxidian-load.cjs",
 		"smoke:chart-axis": "node scripts/smoke-chart-axis-format.mjs",
 		"smoke:chart-data": "node scripts/smoke-chart-data-edit.mjs",
+		"smoke:generated-text": "node scripts/smoke-generated-text-edit.mjs",
 		"smoke:halos": "node scripts/smoke-text-halos.mjs",
 		"smoke:fonts": "node scripts/smoke-font-fidelity.mjs",
 		"smoke:objects": "node scripts/smoke-object-clipboard.mjs",

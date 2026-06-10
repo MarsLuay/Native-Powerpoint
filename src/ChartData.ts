@@ -35,6 +35,13 @@ interface WorkbookCellEdit {
   values: string[];
 }
 
+interface ChartTextSourceBinding {
+  formula: string;
+  index: number;
+  kind: ChartDataValueKind;
+  values: string[];
+}
+
 export interface ChartDataSeries {
   name: string;
   pointLabels: string[] | null;
@@ -81,6 +88,15 @@ function serializeXml(doc: XMLDocument): string {
 
 function getDescendants(element: Element | XMLDocument, localName: string): Element[] {
   return Array.from(element.getElementsByTagNameNS('*', localName));
+}
+
+function hasAncestor(element: Element, localNames: Set<string>): boolean {
+  let current = element.parentElement;
+  while (current) {
+    if (localNames.has(current.localName)) return true;
+    current = current.parentElement;
+  }
+  return false;
 }
 
 function getElementChildren(element: Element | undefined): Element[] {
@@ -204,6 +220,57 @@ function getReferenceSource(element: Element | undefined): ChartDataSource | nul
     formula,
     kind,
     values: getCachedValues(getCache(reference), range.cellReferences.length)
+  };
+}
+
+function normalizeLabelText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function getChartTextSources(chartDoc: XMLDocument): Element[] {
+  const richText = getDescendants(chartDoc, 't')
+    .filter((element) => element.namespaceURI === 'http://schemas.openxmlformats.org/drawingml/2006/main');
+  const cachedTextContainers = new Set(['strCache', 'strLit']);
+  const cachedText = getDescendants(chartDoc, 'v').filter((element) => {
+    return element.parentElement?.localName === 'tx' || hasAncestor(element, cachedTextContainers);
+  });
+
+  return [...richText, ...cachedText];
+}
+
+function getAncestor(element: Element, localName: string): Element | null {
+  let current = element.parentElement;
+  while (current) {
+    if (current.localName === localName) return current;
+    current = current.parentElement;
+  }
+  return null;
+}
+
+function getChartTextSourceBinding(element: Element): ChartTextSourceBinding | null {
+  const point = element.localName === 'pt' ? element : getAncestor(element, 'pt');
+  const cache = point?.parentElement;
+  const reference = cache?.parentElement;
+  if (!point || !cache || !reference) return null;
+
+  const formula = getFormula(reference);
+  const range = formula ? parseCellRange(formula) : null;
+  if (!formula || !range) return null;
+
+  const index = Number(point.getAttribute('idx') ?? getDescendants(cache, 'pt').indexOf(point));
+  if (!Number.isInteger(index) || index < 0 || index >= range.cellReferences.length) {
+    return null;
+  }
+
+  const kind: ChartDataValueKind =
+    reference.localName === 'numRef' || getCache(reference)?.localName === 'numCache'
+      ? 'number'
+      : 'string';
+  return {
+    formula,
+    index,
+    kind,
+    values: getCachedValues(cache, range.cellReferences.length)
   };
 }
 
@@ -637,6 +704,63 @@ export async function updateChartData(
   return buildZip(
     buffer,
     new Map([[descriptor.chartPath, serializeXml(chartDoc)]]),
+    undefined,
+    new Map([[descriptor.workbookPath, workbook]])
+  );
+}
+
+export async function updateChartTextLabel(
+  buffer: ArrayBuffer,
+  descriptor: ChartDataDescriptor,
+  previousText: string,
+  occurrence: number,
+  text: string
+): Promise<ArrayBuffer> {
+  const zip = await extractZip(buffer);
+  const chartXml = zip.textFiles.get(descriptor.chartPath);
+  if (!chartXml) {
+    throw new Error(`Missing chart XML part: ${descriptor.chartPath}`);
+  }
+
+  const chartDoc = parseXml(chartXml, descriptor.chartPath);
+  const normalizedPreviousText = normalizeLabelText(previousText);
+  const matches = getChartTextSources(chartDoc)
+    .filter((element) => normalizeLabelText(element.textContent || '') === normalizedPreviousText);
+  const source = matches[occurrence] ?? matches[0];
+  if (!source) {
+    throw new Error('This chart label is generated from chart scale or numeric data and cannot be renamed directly.');
+  }
+
+  const workbookEdits = new Map<string, WorkbookCellEdit>();
+  const binding = getChartTextSourceBinding(source);
+  if (binding) {
+    const values = [...binding.values];
+    values[binding.index] = text;
+    const chartSource: ChartDataSource = {
+      formula: binding.formula,
+      kind: binding.kind,
+      values: binding.values
+    };
+    addWorkbookEdit(workbookEdits, chartSource, values, 'Chart label');
+    updateChartCaches(chartDoc, binding.formula, values);
+  } else {
+    source.textContent = text;
+  }
+
+  const chartModifications = new Map([[descriptor.chartPath, serializeXml(chartDoc)]]);
+  if (workbookEdits.size === 0 || !descriptor.workbookPath) {
+    return buildZip(buffer, chartModifications);
+  }
+
+  const workbookBytes = zip.binaryFiles.get(descriptor.workbookPath);
+  if (!workbookBytes) {
+    throw new Error('The chart source workbook is missing from the exported presentation.');
+  }
+
+  const workbook = await updateEmbeddedWorkbook(workbookBytes, workbookEdits);
+  return buildZip(
+    buffer,
+    chartModifications,
     undefined,
     new Map([[descriptor.workbookPath, workbook]])
   );
