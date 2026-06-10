@@ -1,6 +1,6 @@
 {
 	"name": "native-powerpoint-doc-editor",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Open, search, and edit DOCX and PPTX files directly in your vault.",
 	"main": "main.js",
 	"type": "module",
@@ -44,6 +44,8 @@
 		"jszip": "^3.10.1",
 		"obsidian": "latest",
 		"pptx-svg": "^0.5.10",
+		"prosemirror-state": "^1.4.4",
+		"prosemirror-view": "^1.41.8",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1"
 	}
