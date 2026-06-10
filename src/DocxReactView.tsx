@@ -802,32 +802,6 @@ function clearListMarkerSelectionHighlights(root: HTMLElement) {
 	});
 }
 
-function getCssGeneratedContentText(element: HTMLElement) {
-	const generatedContent = window.getComputedStyle(element, '::before').content;
-	if (!generatedContent || generatedContent === 'none' || generatedContent === 'normal') {
-		return '';
-	}
-
-	if (
-		(generatedContent.startsWith('"') && generatedContent.endsWith('"'))
-		|| (generatedContent.startsWith("'") && generatedContent.endsWith("'"))
-	) {
-		return generatedContent.slice(1, -1).replace(/\\A/g, '\n').replace(/\\"/g, '"').replace(/\\'/g, "'");
-	}
-
-	return generatedContent;
-}
-
-function getRenderedListMarkerText(marker: HTMLElement) {
-	const text = marker.textContent?.trimEnd() ?? '';
-	if (text.trim().length > 0) {
-		return text;
-	}
-
-	const generatedContentText = getCssGeneratedContentText(marker).trimEnd();
-	return generatedContentText.trim().length > 0 ? generatedContentText : '';
-}
-
 function updateListMarkerSelectionHighlights(root: HTMLElement, view: EditorView) {
 	clearListMarkerSelectionHighlights(root);
 
@@ -1350,7 +1324,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		state: {
 			init: () => ({ matches: [], currentIndex: 0 }),
 			apply: (transaction, previous) => {
-				const nextState = transaction.getMeta(findHighlightPluginKey);
+				const nextState: unknown = transaction.getMeta(findHighlightPluginKey);
 				return isFindHighlightState(nextState) ? nextState : previous;
 			},
 		},
