@@ -1,12 +1,13 @@
 {
 	"name": "native-powerpoint-doc-editor",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"description": "Open, search, and edit DOCX and PPTX files directly in your vault.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && node scripts/check-mobile-compat.mjs",
+		"check:mobile": "node scripts/check-mobile-compat.mjs",
 		"smoke": "node scripts/smoke-docxidian-load.cjs",
 		"smoke:chart-axis": "node scripts/smoke-chart-axis-format.mjs",
 		"smoke:chart-data": "node scripts/smoke-chart-data-edit.mjs",
@@ -16,6 +17,7 @@
 		"smoke:objects": "node scripts/smoke-object-clipboard.mjs",
 		"smoke:pptx-sample": "node scripts/smoke-online-powerpoint-sample.mjs",
 		"visual:caret": "node scripts/visual-inline-caret.mjs",
+		"visual:zoom": "node scripts/visual-powerpoint-zoom.mjs",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint \"src/**/*.{ts,tsx}\""
 	},

@@ -22,9 +22,3 @@ npm run build
 npm run lint
 npm run smoke
 ```
-
-## Status
-
-**Status**: Active local plugin source
-
-**Next**: Keep source, installed plugin output, and the vault installer scripts aligned.

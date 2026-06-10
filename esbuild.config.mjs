@@ -68,6 +68,7 @@ const context = await esbuild.context({
 		"immediate": "./src/shims/immediate.cjs",
 		"readable-stream": "./node_modules/jszip/lib/readable-stream-browser.js",
 		"setimmediate": "./src/shims/setimmediate.ts",
+		"stream": "./src/shims/stream.cjs",
 	},
 	loader: {
 		".css": "text",

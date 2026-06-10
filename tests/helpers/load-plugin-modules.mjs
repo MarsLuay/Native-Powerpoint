@@ -11,6 +11,7 @@ const { DOMParser, XMLSerializer } = require("@xmldom/xmldom");
 let tempDirectoryPromise;
 let packageModulePromise;
 let presentationEngineModulePromise;
+let shapeClipboardModulePromise;
 let viewModulePromise;
 
 globalThis.DOMParser ??= DOMParser;
@@ -75,6 +76,26 @@ export function loadPresentationEngineModule() {
     return require(outfile);
   })();
   return presentationEngineModulePromise;
+}
+
+export function loadShapeClipboardModule() {
+  shapeClipboardModulePromise ??= (async () => {
+    const outputDirectory = await getTempDirectory();
+    const outfile = path.join(outputDirectory, "shape-clipboard.cjs");
+    await build({
+      entryPoints: [path.join(projectRoot, "src/ShapeClipboard.ts")],
+      bundle: true,
+      format: "cjs",
+      loader: { ".wasm": "binary" },
+      logLevel: "silent",
+      outfile,
+      platform: "node",
+      plugins: [inlinePptxSvgWasmPlugin],
+      target: "node22",
+    });
+    return require(outfile);
+  })();
+  return shapeClipboardModulePromise;
 }
 
 export function loadNativePowerPointViewModule() {

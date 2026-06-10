@@ -18,6 +18,9 @@ main.js
 # Visual smoke output
 scripts/visual-output/
 
+# Local manual test documents
+test_files/
+
 # obsidian
 data.json
 

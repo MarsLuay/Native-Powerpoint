@@ -401,7 +401,18 @@ function markLightMenuSurface(surface: HTMLElement, className: string) {
 
 function normalizeEditorFloatingLayers(editorRoot: HTMLElement) {
 	activeDocument.querySelectorAll<HTMLElement>('div[style*="position: fixed"]').forEach((layer) => {
-		layer.classList.toggle('docxidian-fixed-dialog-layer', Boolean(layer.querySelector(':scope > [role="dialog"]')));
+		const isDialogLayer = Boolean(layer.querySelector(':scope > [role="dialog"]'));
+		layer.classList.toggle('docxidian-fixed-dialog-layer', isDialogLayer);
+		// The editor positions these layers with inline top/left/transform, which a
+		// stylesheet rule cannot override. Pin dialog layers to the viewport inline.
+		if (isDialogLayer) {
+			layer.setCssProps({ inset: '0', transform: 'none' });
+			layer.dataset.docxidianFixedLayerPinned = 'true';
+		} else if (layer.dataset.docxidianFixedLayerPinned === 'true') {
+			layer.style.removeProperty('inset');
+			layer.style.removeProperty('transform');
+			delete layer.dataset.docxidianFixedLayerPinned;
+		}
 	});
 
 	const hasFloatingMenu = Boolean(

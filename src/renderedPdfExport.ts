@@ -578,6 +578,14 @@ async function renderPageElementToCanvasJpeg(page: HTMLElement) {
 		windowHeight: Math.max(activeDocument.documentElement.clientHeight, pageHeight),
 		onclone: (_clonedDocument, clonedPage) => {
 			clonedPage.classList.add('docxidian-pdf-export-page');
+			// Neutralize the on-screen zoom transform inline: stylesheet rules
+			// (even high-specificity ones) cannot override an inline transform.
+			clonedPage.setCssProps({
+				transform: 'none',
+				transformOrigin: 'top left',
+				margin: '0',
+				boxShadow: 'none',
+			});
 			clonedPage.querySelectorAll<HTMLElement>(`.${SELECTED_LIST_MARKER_CLASS}`).forEach((marker) => {
 				marker.classList.remove(SELECTED_LIST_MARKER_CLASS);
 			});

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { extractZip } from "pptx-svg";
+import { buildZip, extractZip } from "pptx-svg";
 import {
   loadPowerPointPackageModule,
   loadPresentationEngineModule,
+  loadShapeClipboardModule,
 } from "./helpers/load-plugin-modules.mjs";
 import { createRenderer, readDeck, toArrayBuffer } from "./helpers/renderer.mjs";
 
@@ -154,6 +155,45 @@ test("rapid text edits export one valid final presentation", async () => {
 
   const reloaded = await createRenderer(new Uint8Array(output));
   assert.match(reloaded.getSlideOoxml(0), /Rapid edit 39/);
+});
+
+test("pasted and duplicated shapes receive fresh a16:creationId GUIDs", async () => {
+  const { createSlideObjectClipboard, pasteSlideObject } = await loadShapeClipboardModule();
+  const input = await readDeck("simple-edit.pptx");
+  const inputBuffer = toArrayBuffer(input);
+
+  // Seed a creationId on shape 0 (cNvPr id="2") so paste/duplicate must regenerate it.
+  const slidePath = "ppt/slides/slide1.xml";
+  const sourceZip = await extractZip(inputBuffer);
+  const seedGuid = "{11111111-1111-1111-1111-111111111111}";
+  const creationExt =
+    '<a:extLst><a:ext uri="{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}">' +
+    `<a16:creationId xmlns:a16="http://schemas.microsoft.com/office/drawing/2014/main" id="${seedGuid}"/>` +
+    "</a:ext></a:extLst>";
+  const slideXml = sourceZip.textFiles
+    .get(slidePath)
+    .replace('<p:cNvPr id="2" name="Slide 1 title"/>', `<p:cNvPr id="2" name="Slide 1 title">${creationExt}</p:cNvPr>`);
+  assert.match(slideXml, /id="\{11111111-1111-1111-1111-111111111111\}"/, "seed creationId was injected onto shape 0");
+  const seeded = await buildZip(inputBuffer, new Map([[slidePath, slideXml]]));
+
+  // Paste the seeded shape twice and "duplicate" it (paste back onto the same slide).
+  const clipboard = createSlideObjectClipboard(seeded, 0, 0);
+  const firstPaste = await pasteSlideObject(seeded, clipboard, 0);
+  const secondPaste = await pasteSlideObject(firstPaste.buffer, clipboard, 0);
+  const duplicate = await pasteSlideObject(secondPaste.buffer, clipboard, 0);
+
+  const exportedZip = await extractZip(duplicate.buffer);
+  const guids = [];
+  for (const [partPath, contents] of exportedZip.textFiles) {
+    if (!/^ppt\/slides\/slide\d+\.xml$/.test(partPath)) continue;
+    for (const match of contents.matchAll(/<a16:creationId\b[^>]*\bid="([^"]+)"/g)) {
+      guids.push(match[1]);
+    }
+  }
+
+  assert.equal(guids.length, 4, `expected the seed plus three clones to each carry a creationId, found ${guids.length}`);
+  assert.equal(new Set(guids).size, guids.length, "every a16:creationId GUID must remain unique");
+  assert.equal(guids.filter((guid) => guid === seedGuid).length, 1, "only the source shape keeps the seed GUID");
 });
 
 test("slide add, reorder, and delete operations survive export", async () => {

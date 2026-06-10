@@ -695,19 +695,147 @@ function preserveSlideExtensionList(previousXml: string, exportedXml: string, sl
   const exportedCommonSlide = getDescendants(exportedDocument, 'cSld')[0];
   if (!previousCommonSlide || !exportedCommonSlide) return null;
 
+  let changed = false;
+
   const previousExtensionList = getDirectChild(previousCommonSlide, 'extLst');
-  if (!previousExtensionList) return null;
+  if (previousExtensionList) {
+    const exportedExtensionList = getDirectChild(exportedCommonSlide, 'extLst');
+    const importedExtensionList = exportedDocument.importNode(previousExtensionList, true);
 
-  const exportedExtensionList = getDirectChild(exportedCommonSlide, 'extLst');
-  const importedExtensionList = exportedDocument.importNode(previousExtensionList, true);
-
-  if (exportedExtensionList) {
-    exportedCommonSlide.replaceChild(importedExtensionList, exportedExtensionList);
-  } else {
-    exportedCommonSlide.appendChild(importedExtensionList);
+    if (exportedExtensionList) {
+      exportedCommonSlide.replaceChild(importedExtensionList, exportedExtensionList);
+    } else {
+      exportedCommonSlide.appendChild(importedExtensionList);
+    }
+    changed = true;
   }
 
-  return serializeXml(exportedDocument);
+  if (restoreShapeNonVisualIdentity(previousDocument, exportedDocument)) {
+    changed = true;
+  }
+
+  return changed ? serializeXml(exportedDocument) : null;
+}
+
+interface ShapeIdentity {
+  cNvPr: Element;
+  id: string;
+  name: string;
+  extensionList: Element | null;
+  fingerprint: string;
+}
+
+// When the renderer re-serializes a slide whose shapes were mutated, it strips each
+// shape's non-visual identity: it resets <p:cNvPr> ids to "0", clears names, and drops
+// the per-shape extension list (e.g. the <a16:creationId> that Office writes on every
+// shape). Restore that identity from the previous slide so edits do not silently lose
+// it (which otherwise fails save validation on virtually every real-world deck).
+//
+// Each renderer mutation touches a single shape, so when the shape count is unchanged
+// the previous and exported shape trees line up by index. When a shape was added or
+// removed the counts differ, so unchanged shapes are matched by a geometry + text
+// fingerprint instead.
+function restoreShapeNonVisualIdentity(previousDocument: XMLDocument, exportedDocument: XMLDocument): boolean {
+  const previousShapes = collectShapeIdentities(previousDocument);
+  const exportedShapes = collectShapeIdentities(exportedDocument);
+  if (previousShapes.length === 0 || exportedShapes.length === 0) return false;
+
+  const pairs: Array<[ShapeIdentity, ShapeIdentity]> = [];
+  if (previousShapes.length === exportedShapes.length) {
+    exportedShapes.forEach((exported, index) => {
+      const previous = previousShapes[index];
+      if (previous) pairs.push([previous, exported]);
+    });
+  } else {
+    const remaining = [...previousShapes];
+    for (const exported of exportedShapes) {
+      const matchIndex = remaining.findIndex((candidate) => candidate.fingerprint === exported.fingerprint);
+      const previous = matchIndex >= 0 ? remaining[matchIndex] : undefined;
+      if (previous) {
+        pairs.push([previous, exported]);
+        remaining.splice(matchIndex, 1);
+      }
+    }
+  }
+
+  let changed = false;
+  for (const [previous, exported] of pairs) {
+    if (isAnonymizedShapeId(exported.id) && !isAnonymizedShapeId(previous.id)) {
+      exported.cNvPr.setAttribute('id', previous.id);
+      if (!exported.name && previous.name) {
+        exported.cNvPr.setAttribute('name', previous.name);
+      }
+      changed = true;
+    }
+    if (previous.extensionList && !exported.extensionList) {
+      exported.cNvPr.appendChild(exportedDocument.importNode(previous.extensionList, true));
+      changed = true;
+    }
+  }
+
+  if (ensureUniqueShapeIds(exportedShapes)) {
+    changed = true;
+  }
+
+  return changed;
+}
+
+function collectShapeIdentities(document: XMLDocument): ShapeIdentity[] {
+  return getDescendants(document, 'cNvPr').map((cNvPr) => {
+    const shape = cNvPr.parentNode?.parentNode as Element | undefined;
+    return {
+      cNvPr,
+      id: cNvPr.getAttribute('id') ?? '',
+      name: cNvPr.getAttribute('name') ?? '',
+      extensionList: getDirectChild(cNvPr, 'extLst'),
+      fingerprint: getShapeFingerprint(shape)
+    };
+  });
+}
+
+function getShapeFingerprint(shape: Element | undefined): string {
+  if (!shape) return '';
+  const transform = getDescendants(shape, 'xfrm')[0];
+  const offset = transform ? getDirectChild(transform, 'off') : null;
+  const extent = transform ? getDirectChild(transform, 'ext') : null;
+  const geometry = [
+    offset?.getAttribute('x') ?? '',
+    offset?.getAttribute('y') ?? '',
+    extent?.getAttribute('cx') ?? '',
+    extent?.getAttribute('cy') ?? ''
+  ].join(',');
+  const text = (shape.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 64);
+  return `${shape.localName}|${geometry}|${text}`;
+}
+
+function isAnonymizedShapeId(id: string): boolean {
+  return id === '' || id === '0';
+}
+
+function ensureUniqueShapeIds(shapes: ShapeIdentity[]): boolean {
+  const reservedIds = new Set<number>();
+  for (const shape of shapes) {
+    const numericId = Number(shape.cNvPr.getAttribute('id'));
+    if (Number.isInteger(numericId) && numericId > 0) {
+      reservedIds.add(numericId);
+    }
+  }
+
+  const consumedIds = new Set<number>();
+  let changed = false;
+  let nextId = 1;
+  for (const shape of shapes) {
+    const numericId = Number(shape.cNvPr.getAttribute('id'));
+    if (Number.isInteger(numericId) && numericId > 0 && !consumedIds.has(numericId)) {
+      consumedIds.add(numericId);
+      continue;
+    }
+    while (consumedIds.has(nextId) || reservedIds.has(nextId)) nextId++;
+    shape.cNvPr.setAttribute('id', String(nextId));
+    consumedIds.add(nextId);
+    changed = true;
+  }
+  return changed;
 }
 
 function getDirectChild(element: Element, localName: string): Element | null {

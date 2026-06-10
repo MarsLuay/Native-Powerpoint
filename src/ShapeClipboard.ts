@@ -171,6 +171,26 @@ function assignUniqueNonVisualIds(destinationSlide: XMLDocument, clonedShape: El
     }
     usedIds.add(nextId++);
   }
+
+  // A pasted/duplicated shape is a new object, so give it fresh Office creation
+  // GUIDs. Reusing the source's <a16:creationId> would leave duplicate GUIDs in the
+  // deck (these are meant to uniquely identify each shape across edits/collaboration).
+  for (const creationId of getDescendants(clonedShape, 'creationId')) {
+    creationId.setAttribute('id', generateOoxmlGuid());
+  }
+}
+
+function generateOoxmlGuid(): string {
+  const uuid = globalThis.crypto?.randomUUID?.() ?? fallbackUuid();
+  return `{${uuid.toUpperCase()}}`;
+}
+
+function fallbackUuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (character) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = character === 'x' ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
 }
 
 async function copyShapeRelationships(

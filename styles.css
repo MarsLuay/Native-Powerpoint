@@ -38,14 +38,14 @@
 	visibility: hidden;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root {
-	--doc-bg: #ffffff !important;
-	--doc-bg-hover: #f1f5f9 !important;
-	--doc-border: #d1d5db !important;
-	--doc-border-light: #e2e8f0 !important;
-	--doc-hover: #f1f5f9 !important;
-	--doc-text: #202124 !important;
-	--doc-text-muted: #5f6368 !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root {
+	--doc-bg: #ffffff;
+	--doc-bg-hover: #f1f5f9;
+	--doc-border: #d1d5db;
+	--doc-border-light: #e2e8f0;
+	--doc-hover: #f1f5f9;
+	--doc-text: #202124;
+	--doc-text-muted: #5f6368;
 }
 
 .docxidian-host .ep-root button,
@@ -116,15 +116,15 @@
 	transform: var(--docxidian-fixed-correction) var(--docxidian-existing-transform, none);
 }
 
-.docxidian-host .ep-root .docxidian-fixed-dialog-layer {
-	inset: 0 !important;
-	transform: none !important;
+.docxidian-host.docxidian-host .ep-root .docxidian-fixed-dialog-layer {
+	inset: 0;
+	transform: none;
 }
 
-.docxidian-host .ep-root [data-testid='editor-toolbar'] {
+.docxidian-host.docxidian-host .ep-root [data-testid='editor-toolbar'] {
 	isolation: isolate;
 	position: relative;
-	z-index: 100010 !important;
+	z-index: 100010;
 }
 
 .workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'],
@@ -138,11 +138,11 @@
 	width: 100%;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] input.truncate,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] span.truncate {
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] input.truncate,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] span.truncate {
 	flex: 1 1 auto;
-	max-width: none !important;
-	min-width: 0 !important;
+	max-width: none;
+	min-width: 0;
 	width: 100%;
 }
 
@@ -150,12 +150,12 @@
 	color: #0f172a;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] input,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] select,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] textarea {
-	background: #ffffff !important;
-	border-color: #cbd5e1 !important;
-	color: #0f172a !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] input,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] select,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] textarea {
+	background: #ffffff;
+	border-color: #cbd5e1;
+	color: #0f172a;
 }
 
 .workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] option {
@@ -174,60 +174,60 @@
 	background-color: #f8fafc;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] {
-	background: #ffffff !important;
-	border-color: #e2e8f0 !important;
-	color: #1e293b !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] {
+	background: #ffffff;
+	border-color: #e2e8f0;
+	color: #1e293b;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option'] {
-	background: transparent !important;
-	border: 0 !important;
-	box-shadow: none !important;
-	color: #334155 !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option'] {
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	color: #334155;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button:hover,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button:focus,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option']:hover,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option']:focus,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='option'][aria-selected='true'],
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='option'][data-highlighted] {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button:hover,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button:focus,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option']:hover,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option']:focus,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='option'][aria-selected='true'],
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='option'][data-highlighted] {
+	background: #f1f5f9;
+	color: #0f172a;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='font-size-display'],
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='font-size-input'] {
-	color: #0f172a !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='font-size-display'],
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='font-size-input'] {
+	color: #0f172a;
 }
 
-body .docxidian-light-menu-shell,
-body .docxidian-light-menu-surface,
-body [data-docxidian-mode-menu='true'] {
-	background: #ffffff !important;
-	border-color: #d1d5db !important;
-	color: #0f172a !important;
+body .docxidian-light-menu-shell.docxidian-light-menu-shell,
+body .docxidian-light-menu-surface.docxidian-light-menu-surface,
+body [data-docxidian-mode-menu='true'][data-docxidian-mode-menu='true'] {
+	background: #ffffff;
+	border-color: #d1d5db;
+	color: #0f172a;
 	color-scheme: light;
 }
 
-body .docxidian-light-menu-surface :is(button, [role='menuitem'], [role='option']),
-body [data-docxidian-mode-menu='true'] :is(button, [role='menuitem'], [role='option']),
-body.theme-dark .docxidian-light-menu-surface :is(button, [role='menuitem'], [role='option']),
-body.theme-dark [data-docxidian-mode-menu='true'] :is(button, [role='menuitem'], [role='option']) {
-	background: transparent !important;
-	border-color: transparent !important;
-	box-shadow: none !important;
-	color: #334155 !important;
+body .docxidian-light-menu-surface.docxidian-light-menu-surface :is(button, [role='menuitem'], [role='option']),
+body [data-docxidian-mode-menu='true'][data-docxidian-mode-menu='true'] :is(button, [role='menuitem'], [role='option']),
+body.theme-dark.theme-dark .docxidian-light-menu-surface :is(button, [role='menuitem'], [role='option']),
+body.theme-dark.theme-dark [data-docxidian-mode-menu='true'] :is(button, [role='menuitem'], [role='option']) {
+	background: transparent;
+	border-color: transparent;
+	box-shadow: none;
+	color: #334155;
 }
 
-body .docxidian-light-menu-surface :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
-body [data-docxidian-mode-menu='true'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
-body.theme-dark .docxidian-light-menu-surface :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
-body.theme-dark [data-docxidian-mode-menu='true'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]) {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+body .docxidian-light-menu-surface.docxidian-light-menu-surface :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
+body [data-docxidian-mode-menu='true'][data-docxidian-mode-menu='true'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
+body.theme-dark.theme-dark .docxidian-light-menu-surface :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
+body.theme-dark.theme-dark [data-docxidian-mode-menu='true'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]) {
+	background: #f1f5f9;
+	color: #0f172a;
 }
 
 body [data-docxidian-mode-menu='true'].docxidian-mode-menu-normalized {
@@ -236,10 +236,10 @@ body [data-docxidian-mode-menu='true'].docxidian-mode-menu-normalized {
 	padding: 4px 0;
 }
 
-body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-item {
+body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-item.docxidian-mode-menu-item {
 	align-items: center;
-	box-shadow: none !important;
-	display: grid !important;
+	box-shadow: none;
+	display: grid;
 	gap: 0 10px;
 	grid-template-columns: 24px minmax(0, 1fr) 20px;
 	justify-content: start;
@@ -274,20 +274,20 @@ body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-check {
 	margin-left: 0;
 }
 
-.docxidian-import-font-separator {
-	background: #e2e8f0 !important;
+.docxidian-import-font-separator.docxidian-import-font-separator {
+	background: #e2e8f0;
 	height: 1px;
 	margin: 4px 0;
 }
 
-body .docxidian-import-font-option,
-body.theme-dark .docxidian-import-font-option {
+body .docxidian-import-font-option.docxidian-import-font-option,
+body.theme-dark.theme-dark .docxidian-import-font-option {
 	align-items: center;
-	background: transparent !important;
-	border: 0 !important;
+	background: transparent;
+	border: 0;
 	border-radius: 4px;
-	box-shadow: none !important;
-	color: #0f172a !important;
+	box-shadow: none;
+	color: #0f172a;
 	cursor: pointer;
 	display: flex;
 	font-size: 13px;
@@ -298,27 +298,27 @@ body.theme-dark .docxidian-import-font-option {
 	width: 100%;
 }
 
-body .docxidian-import-font-option:hover,
-body .docxidian-import-font-option:focus,
-body.theme-dark .docxidian-import-font-option:hover,
-body.theme-dark .docxidian-import-font-option:focus {
-	background: #f1f5f9 !important;
+body .docxidian-import-font-option.docxidian-import-font-option:hover,
+body .docxidian-import-font-option.docxidian-import-font-option:focus,
+body.theme-dark.theme-dark .docxidian-import-font-option:hover,
+body.theme-dark.theme-dark .docxidian-import-font-option:focus {
+	background: #f1f5f9;
 	outline: none;
 }
 
-.docxidian-custom-table-separator {
-	background: #e2e8f0 !important;
+.docxidian-custom-table-separator.docxidian-custom-table-separator {
+	background: #e2e8f0;
 	height: 1px;
 	margin: 8px 0 4px;
 }
 
-body .docxidian-custom-table-option,
-body.theme-dark .docxidian-custom-table-option {
-	background: transparent !important;
-	border: 0 !important;
+body .docxidian-custom-table-option.docxidian-custom-table-option,
+body.theme-dark.theme-dark .docxidian-custom-table-option {
+	background: transparent;
+	border: 0;
 	border-radius: 4px;
-	box-shadow: none !important;
-	color: #0f172a !important;
+	box-shadow: none;
+	color: #0f172a;
 	cursor: pointer;
 	font-size: 13px;
 	min-height: 30px;
@@ -327,11 +327,11 @@ body.theme-dark .docxidian-custom-table-option {
 	width: 100%;
 }
 
-body .docxidian-custom-table-option:hover,
-body .docxidian-custom-table-option:focus,
-body.theme-dark .docxidian-custom-table-option:hover,
-body.theme-dark .docxidian-custom-table-option:focus {
-	background: #f1f5f9 !important;
+body .docxidian-custom-table-option.docxidian-custom-table-option:hover,
+body .docxidian-custom-table-option.docxidian-custom-table-option:focus,
+body.theme-dark.theme-dark .docxidian-custom-table-option:hover,
+body.theme-dark.theme-dark .docxidian-custom-table-option:focus {
+	background: #f1f5f9;
 	outline: none;
 }
 
@@ -346,12 +346,12 @@ body.theme-dark .docxidian-custom-table-option:focus {
 	z-index: 100070;
 }
 
-.docxidian-custom-table-dialog {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+.docxidian-custom-table-dialog.docxidian-custom-table-dialog {
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 8px;
 	box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
-	color: #0f172a !important;
+	color: #0f172a;
 	color-scheme: light;
 	display: grid;
 	gap: 12px;
@@ -376,11 +376,11 @@ body.theme-dark .docxidian-custom-table-option:focus {
 	font-size: 13px;
 }
 
-.docxidian-custom-table-field input {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+.docxidian-custom-table-field.docxidian-custom-table-field input {
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	color: #0f172a !important;
+	color: #0f172a;
 	font-size: 13px;
 	height: 32px;
 	padding: 4px 8px;
@@ -394,33 +394,33 @@ body.theme-dark .docxidian-custom-table-option:focus {
 	margin-top: 2px;
 }
 
-.docxidian-custom-table-actions button {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+.docxidian-custom-table-actions.docxidian-custom-table-actions button {
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	color: #0f172a !important;
+	color: #0f172a;
 	cursor: pointer;
 	font-size: 13px;
 	height: 32px;
 	padding: 0 12px;
 }
 
-.docxidian-custom-table-actions button:hover,
-.docxidian-custom-table-actions button:focus {
-	background: #f8fafc !important;
+.docxidian-custom-table-actions.docxidian-custom-table-actions button:hover,
+.docxidian-custom-table-actions.docxidian-custom-table-actions button:focus {
+	background: #f8fafc;
 	outline: none;
 }
 
-.docxidian-custom-table-actions .docxidian-custom-table-primary {
-	background: #2563eb !important;
-	border-color: #2563eb !important;
-	color: #ffffff !important;
+.docxidian-custom-table-actions.docxidian-custom-table-actions .docxidian-custom-table-primary {
+	background: #2563eb;
+	border-color: #2563eb;
+	color: #ffffff;
 }
 
-.docxidian-custom-table-actions .docxidian-custom-table-primary:hover,
-.docxidian-custom-table-actions .docxidian-custom-table-primary:focus {
-	background: #1d4ed8 !important;
-	border-color: #1d4ed8 !important;
+.docxidian-custom-table-actions.docxidian-custom-table-actions .docxidian-custom-table-primary:hover,
+.docxidian-custom-table-actions.docxidian-custom-table-actions .docxidian-custom-table-primary:focus {
+	background: #1d4ed8;
+	border-color: #1d4ed8;
 }
 
 /* Match the editor's header/footer behavior so typed spaces stay visible in body text. */
@@ -429,18 +429,18 @@ body.theme-dark .docxidian-custom-table-option:focus {
 	white-space: pre-wrap;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .layout-list-marker,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .layout-list-marker-line,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-list-marker {
-	-webkit-user-select: text !important;
-	cursor: text !important;
-	user-select: text !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .layout-list-marker,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .layout-list-marker-line,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-list-marker {
+	-webkit-user-select: text;
+	cursor: text;
+	user-select: text;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-list-marker-selected {
-	background: rgba(26, 115, 232, 0.3) !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-list-marker-selected {
+	background: rgba(26, 115, 232, 0.3);
 	border-radius: 2px;
-	color: inherit !important;
+	color: inherit;
 }
 
 .workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button {
@@ -460,24 +460,24 @@ body.theme-dark .docxidian-custom-table-option:focus {
 	white-space: nowrap;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button:hover,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button:focus {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button:hover,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button:focus {
+	background: #f1f5f9;
+	color: #0f172a;
 	outline: none;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-menu,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-menu,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-menu {
-	background: #ffffff !important;
-	border: 1px solid #d1d5db !important;
+	background: #ffffff;
+	border: 1px solid #d1d5db;
 	border-radius: 6px;
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
-	color: #0f172a !important;
+	color: #0f172a;
 	color-scheme: light;
 	left: 0;
 	max-height: min(70vh, 620px);
@@ -489,13 +489,13 @@ body.theme-dark
 	z-index: 100060;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-section,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-section,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-section {
-	color: #475569 !important;
+	color: #475569;
 	font-size: 11px;
 	font-weight: 700;
 	letter-spacing: 0;
@@ -503,18 +503,18 @@ body.theme-dark
 	text-transform: uppercase;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-row {
 	align-items: center;
-	background: transparent !important;
+	background: transparent;
 	border: 1px solid transparent;
 	border-radius: 6px;
 	box-sizing: border-box;
-	color: #0f172a !important;
+	color: #0f172a;
 	display: flex;
 	gap: 12px;
 	justify-content: space-between;
@@ -522,19 +522,19 @@ body.theme-dark
 	width: 100%;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row:hover,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row:focus-within,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row:hover,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row:focus-within,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-row:hover,
-body.theme-dark
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-row:focus-within {
-	background: #f8fafc !important;
+	background: #f8fafc;
 	border-color: #e2e8f0;
 }
 
@@ -544,25 +544,25 @@ body.theme-dark
 	min-width: 0;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-label,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-label,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-label {
-	color: #0f172a !important;
+	color: #0f172a;
 	font-size: 12px;
 	font-weight: 600;
 	line-height: 1.3;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-desc,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-desc,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-desc {
-	color: #64748b !important;
+	color: #64748b;
 	font-size: 11px;
 	line-height: 1.3;
 	max-width: 260px;
@@ -586,40 +586,40 @@ body.theme-dark
 	gap: 6px;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-input,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-select,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-input,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-select,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-input,
-body.theme-dark
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-select {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 5px;
-	box-shadow: none !important;
-	color: #0f172a !important;
+	box-shadow: none;
+	color: #0f172a;
 	font-size: 12px;
 	height: 30px;
 	min-width: 126px;
 	padding: 4px 7px;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-action {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 5px;
-	box-shadow: none !important;
-	color: #0f172a !important;
+	box-shadow: none;
+	color: #0f172a;
 	cursor: pointer;
 	flex: 0 0 auto;
 	font-size: 12px;
@@ -629,50 +629,50 @@ body.theme-dark
 	white-space: nowrap;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action:hover,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action:focus,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action:hover,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action:focus,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-action:hover,
-body.theme-dark
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-editor-settings-action:focus {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+	background: #f1f5f9;
+	color: #0f172a;
 	outline: none;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view']
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	[data-testid='editor-toolbar']
 	button:is([aria-label*='image' i], [aria-label*='picture' i], [title*='image' i], [title*='picture' i]) {
-	display: none !important;
+	display: none;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view']
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	[data-testid='editor-toolbar']
 	button:is([aria-label='Search editor options'], [title='Search editor options']) {
-	display: none !important;
+	display: none;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-menu,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-menu,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-option-search-menu {
-	background: #ffffff !important;
-	border: 1px solid #d1d5db !important;
+	background: #ffffff;
+	border: 1px solid #d1d5db;
 	border-radius: 6px;
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
-	color: #0f172a !important;
+	color: #0f172a;
 	color-scheme: light;
 	left: 0;
 	min-width: 260px;
@@ -682,17 +682,17 @@ body.theme-dark
 	z-index: 100050;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-input,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-input,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-option-search-input {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 5px;
-	box-shadow: none !important;
-	color: #0f172a !important;
+	box-shadow: none;
+	color: #0f172a;
 	font-size: 12px;
 	height: 28px;
 	margin: 0 0 4px;
@@ -707,17 +707,17 @@ body.theme-dark
 	overflow: auto;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-option-search-result {
-	background: transparent !important;
-	border: 0 !important;
+	background: transparent;
+	border: 0;
 	border-radius: 4px;
-	box-shadow: none !important;
-	color: #334155 !important;
+	box-shadow: none;
+	color: #334155;
 	cursor: pointer;
 	justify-content: flex-start;
 	font-size: 12px;
@@ -729,26 +729,26 @@ body.theme-dark
 	width: 100%;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result:hover,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result:focus,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result[aria-selected='true'],
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result:hover,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result:focus,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result[aria-selected='true'],
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-option-search-result:hover,
-body.theme-dark
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-option-search-result:focus,
-body.theme-dark
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-option-search-result[aria-selected='true'] {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+	background: #f1f5f9;
+	color: #0f172a;
 }
 
 .workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-empty {
@@ -757,39 +757,39 @@ body.theme-dark
 	padding: 8px;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'],
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] {
-	background: #ffffff !important;
-	border-color: #d1d5db !important;
-	color: #0f172a !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'],
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] {
+	background: #ffffff;
+	border-color: #d1d5db;
+	color: #0f172a;
 	isolation: isolate;
-	opacity: 1 !important;
-	z-index: 100020 !important;
+	opacity: 1;
+	z-index: 100020;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] :is(button, [role='menuitem'], [role='option']),
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] :is(button, [role='menuitem'], [role='option']) {
-	background: transparent !important;
-	box-shadow: none !important;
-	color: #334155 !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] :is(button, [role='menuitem'], [role='option']),
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] :is(button, [role='menuitem'], [role='option']) {
+	background: transparent;
+	box-shadow: none;
+	color: #334155;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]),
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]) {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]),
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]) {
+	background: #f1f5f9;
+	color: #0f172a;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-outline-nav {
-	z-index: 1 !important;
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-outline-nav {
+	z-index: 1;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view']
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root.docxidian-has-floating-menu
 	.docx-outline-nav {
-	opacity: 0 !important;
-	pointer-events: none !important;
+	opacity: 0;
+	pointer-events: none;
 }
 
 .workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] > div:first-child {
@@ -863,22 +863,22 @@ body > .ep-root,
 }
 
 /* Hide the editor's tooltip; Docxidian positions its own labels after toolbar scroll. */
-.workspace-leaf-content[data-type='docxidian-docx-view']
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.fixed.z-50.bg-slate-900.rounded-md.shadow-lg:not([role]),
-body.docxidian-editor-hovering
+body.docxidian-editor-hovering.docxidian-editor-hovering
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.fixed.z-50.bg-slate-900.rounded-md.shadow-lg:not([role]) {
-	display: none !important;
-	pointer-events: none !important;
+	display: none;
+	pointer-events: none;
 }
 
-body.docxidian-editor-hovering > .fixed.z-50.bg-slate-900.rounded-md.shadow-lg:not([role]) {
-	display: none !important;
-	pointer-events: none !important;
+body.docxidian-editor-hovering.docxidian-editor-hovering > .fixed.z-50.bg-slate-900.rounded-md.shadow-lg:not([role]) {
+	display: none;
+	pointer-events: none;
 }
 
 .docxidian-toolbar-tooltip {
@@ -913,28 +913,28 @@ body.docxidian-editor-hovering > .fixed.z-50.bg-slate-900.rounded-md.shadow-lg:n
 	touch-action: pan-x pan-y;
 }
 
-.docxidian-pdf-export-page {
-	box-shadow: none !important;
-	margin: 0 !important;
-	transform: none !important;
-	transform-origin: top left !important;
+.docxidian-pdf-export-page.docxidian-pdf-export-page {
+	box-shadow: none;
+	margin: 0;
+	transform: none;
+	transform-origin: top left;
 }
 
-body .docxidian-find-dialog,
-body.theme-dark .docxidian-find-dialog {
-	background: #ffffff !important;
-	border-color: #d1d5db !important;
-	color: #0f172a !important;
+body .docxidian-find-dialog.docxidian-find-dialog,
+body.theme-dark.theme-dark .docxidian-find-dialog {
+	background: #ffffff;
+	border-color: #d1d5db;
+	color: #0f172a;
 	color-scheme: light;
 }
 
-body .docxidian-find-dialog input:not([type='checkbox']),
-body.theme-dark .docxidian-find-dialog input:not([type='checkbox']) {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+body .docxidian-find-dialog.docxidian-find-dialog input:not([type='checkbox']),
+body.theme-dark.theme-dark .docxidian-find-dialog input:not([type='checkbox']) {
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	box-shadow: none !important;
-	color: #0f172a !important;
+	box-shadow: none;
+	color: #0f172a;
 	padding: 4px 8px;
 }
 
@@ -943,21 +943,21 @@ body.theme-dark .docxidian-find-dialog input[type='checkbox'] {
 	color-scheme: light;
 }
 
-body .docxidian-find-dialog button,
-body.theme-dark .docxidian-find-dialog button {
-	background: #ffffff !important;
-	border: 1px solid #cbd5e1 !important;
+body .docxidian-find-dialog.docxidian-find-dialog button,
+body.theme-dark.theme-dark .docxidian-find-dialog button {
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	box-shadow: none !important;
-	color: #0f172a !important;
+	box-shadow: none;
+	color: #0f172a;
 	min-height: 28px;
 }
 
-body .docxidian-find-dialog button:hover:not(:disabled),
-body .docxidian-find-dialog button:focus:not(:disabled),
-body.theme-dark .docxidian-find-dialog button:hover:not(:disabled),
-body.theme-dark .docxidian-find-dialog button:focus:not(:disabled) {
-	background: #f1f5f9 !important;
+body .docxidian-find-dialog.docxidian-find-dialog button:hover:not(:disabled),
+body .docxidian-find-dialog.docxidian-find-dialog button:focus:not(:disabled),
+body.theme-dark.theme-dark .docxidian-find-dialog button:hover:not(:disabled),
+body.theme-dark.theme-dark .docxidian-find-dialog button:focus:not(:disabled) {
+	background: #f1f5f9;
 	outline: none;
 }
 
@@ -1025,20 +1025,20 @@ body.theme-dark .docxidian-find-dialog button:focus:not(:disabled) {
 	margin-left: auto;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-file-menu-button {
 	align-items: center;
-	background: transparent !important;
-	border: 0 !important;
+	background: transparent;
+	border: 0;
 	border-radius: 4px;
-	box-shadow: none !important;
-	color: #334155 !important;
+	box-shadow: none;
+	color: #334155;
 	cursor: pointer;
-	display: flex !important;
+	display: flex;
 	font-size: 12px;
 	justify-content: flex-start;
 	line-height: 1.35;
@@ -1049,39 +1049,39 @@ body.theme-dark
 	width: 100%;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button *,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button *,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-file-menu-button * {
-	color: inherit !important;
+	color: inherit;
 }
 
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button:hover,
-.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button:focus,
-body.theme-dark
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button:hover,
+.workspace-leaf-content.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button:focus,
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-file-menu-button:hover,
-body.theme-dark
+body.theme-dark.theme-dark
 	.workspace-leaf-content[data-type='docxidian-docx-view']
 	.docxidian-host
 	.ep-root
 	.docxidian-file-menu-button:focus {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+	background: #f1f5f9;
+	color: #0f172a;
 	outline: none;
 }
 
-body .docxidian-export-submenu,
-body.theme-dark .docxidian-export-submenu {
-	background: #ffffff !important;
-	border: 1px solid var(--doc-border, #d1d5db) !important;
+body .docxidian-export-submenu.docxidian-export-submenu,
+body.theme-dark.theme-dark .docxidian-export-submenu {
+	background: #ffffff;
+	border: 1px solid var(--doc-border, #d1d5db);
 	border-radius: 6px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-	color: #0f172a !important;
+	color: #0f172a;
 	color-scheme: light;
 	display: none;
 	left: calc(100% + 2px);
@@ -1092,17 +1092,17 @@ body.theme-dark .docxidian-export-submenu {
 	z-index: 10005;
 }
 
-body .docxidian-export-submenu :is(button, [role='menuitem'], [role='option']),
-body.theme-dark .docxidian-export-submenu :is(button, [role='menuitem'], [role='option']) {
-	background: transparent !important;
-	box-shadow: none !important;
-	color: #334155 !important;
+body .docxidian-export-submenu.docxidian-export-submenu :is(button, [role='menuitem'], [role='option']),
+body.theme-dark.theme-dark .docxidian-export-submenu :is(button, [role='menuitem'], [role='option']) {
+	background: transparent;
+	box-shadow: none;
+	color: #334155;
 }
 
-body .docxidian-export-submenu :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]),
-body.theme-dark .docxidian-export-submenu :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]) {
-	background: #f1f5f9 !important;
-	color: #0f172a !important;
+body .docxidian-export-submenu.docxidian-export-submenu :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]),
+body.theme-dark.theme-dark .docxidian-export-submenu :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]) {
+	background: #f1f5f9;
+	color: #0f172a;
 }
 
 .docxidian-export-menu-item:hover > .docxidian-export-submenu,
@@ -1271,14 +1271,14 @@ body.theme-dark .docxidian-export-submenu :is(button:hover, button:focus, [role=
 	overflow-wrap: anywhere;
 }
 
-body .docxidian-hidden-text-shell,
-body.theme-dark .docxidian-hidden-text-shell {
-	background: #ffffff !important;
+body .docxidian-hidden-text-shell.docxidian-hidden-text-shell,
+body.theme-dark.theme-dark .docxidian-hidden-text-shell {
+	background: #ffffff;
 	border: 1px solid #d1d5db;
 	border-radius: 8px;
 	box-sizing: border-box;
 	box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
-	color: #0f172a !important;
+	color: #0f172a;
 	color-scheme: light;
 	max-height: min(760px, calc(100vh - 80px));
 	max-width: min(760px, calc(100vw - 32px));
@@ -1287,10 +1287,10 @@ body.theme-dark .docxidian-hidden-text-shell {
 	width: min(760px, calc(100vw - 32px));
 }
 
-body .docxidian-hidden-text-shell .modal-close-button,
-body.theme-dark .docxidian-hidden-text-shell .modal-close-button {
+body .docxidian-hidden-text-shell.docxidian-hidden-text-shell .modal-close-button,
+body.theme-dark.theme-dark .docxidian-hidden-text-shell .modal-close-button {
 	align-items: center;
-	color: #64748b !important;
+	color: #64748b;
 	display: flex;
 	height: 28px;
 	justify-content: center;
@@ -1300,16 +1300,16 @@ body.theme-dark .docxidian-hidden-text-shell .modal-close-button {
 	z-index: 2;
 }
 
-body .docxidian-hidden-text-shell .modal-close-button:hover,
-body.theme-dark .docxidian-hidden-text-shell .modal-close-button:hover {
+body .docxidian-hidden-text-shell.docxidian-hidden-text-shell .modal-close-button:hover,
+body.theme-dark.theme-dark .docxidian-hidden-text-shell .modal-close-button:hover {
 	background: #f1f5f9;
-	color: #0f172a !important;
+	color: #0f172a;
 }
 
-body .docxidian-hidden-text-modal,
-body.theme-dark .docxidian-hidden-text-modal {
+body .docxidian-hidden-text-modal.docxidian-hidden-text-modal,
+body.theme-dark.theme-dark .docxidian-hidden-text-modal {
 	box-sizing: border-box;
-	color: #0f172a !important;
+	color: #0f172a;
 	display: flex;
 	flex-direction: column;
 	max-height: calc(min(760px, 100vh - 80px) - 32px);
@@ -1319,18 +1319,18 @@ body.theme-dark .docxidian-hidden-text-modal {
 	width: 100%;
 }
 
-body .docxidian-hidden-text-modal h2,
-body.theme-dark .docxidian-hidden-text-modal h2 {
-	color: #0f172a !important;
+body .docxidian-hidden-text-modal.docxidian-hidden-text-modal h2,
+body.theme-dark.theme-dark .docxidian-hidden-text-modal h2 {
+	color: #0f172a;
 	font-size: 18px;
 	font-weight: 650;
 	line-height: 1.25;
 	margin: 0 28px 8px 0;
 }
 
-body .docxidian-hidden-text-summary,
-body.theme-dark .docxidian-hidden-text-summary {
-	color: #475569 !important;
+body .docxidian-hidden-text-summary.docxidian-hidden-text-summary,
+body.theme-dark.theme-dark .docxidian-hidden-text-summary {
+	color: #475569;
 	font-size: var(--font-ui-small);
 	line-height: 1.45;
 	margin: 0 0 14px;
@@ -1853,14 +1853,14 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	z-index: 10;
 }
 
-.native-powerpoint-inline-editor.is-text-run {
+.native-powerpoint-inline-editor.native-powerpoint-inline-editor.is-text-run {
 	background: transparent;
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
 	box-sizing: border-box;
 	caret-color: transparent;
-	color: transparent !important;
+	color: transparent;
 	opacity: 0;
 	overflow: hidden;
 	padding: 0 2px;
