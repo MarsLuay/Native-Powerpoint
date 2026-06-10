@@ -1961,15 +1961,6 @@ export class DocxView extends FileView {
 	}
 
 	private prepareViewHost() {
-		this.contentEl.setCssProps({
-			padding: '0',
-			overflow: 'hidden',
-			height: '100%',
-			display: 'flex',
-			'flex-direction': 'column',
-			'min-height': '0',
-		});
-
 		if (!this.hostEl) {
 			return;
 		}
@@ -1977,14 +1968,6 @@ export class DocxView extends FileView {
 		this.hostEl.setCssProps({
 			'--docxidian-fixed-left-offset': '0px',
 			'--docxidian-fixed-top-offset': '0px',
-			background: '#f8fafc',
-			display: 'flex',
-			flex: '1 1 auto',
-			'flex-direction': 'column',
-			height: '100%',
-			'min-height': '0',
-			overflow: 'hidden',
-			width: '100%',
 		});
 	}
 
@@ -1995,13 +1978,6 @@ export class DocxView extends FileView {
 			}
 
 			const fixedProbe = this.hostEl.createDiv({ cls: 'docxidian-fixed-probe' });
-			fixedProbe.setCssProps({
-				left: '0',
-				'pointer-events': 'none',
-				position: 'fixed',
-				top: '0',
-				visibility: 'hidden',
-			});
 			const fixedRect = fixedProbe.getBoundingClientRect();
 			fixedProbe.remove();
 
@@ -2727,17 +2703,14 @@ export class DocxView extends FileView {
 			}
 
 			button.querySelectorAll('[data-docxidian-export-chevron]').forEach(chevron => chevron.remove());
-			if (options.showChevron) {
-				const chevron = document.createElement('span');
-				chevron.dataset.docxidianExportChevron = 'true';
-				chevron.textContent = '›';
-				chevron.setCssProps({
-					'margin-left': 'auto',
-					'font-size': '14px',
-				});
-				button.appendChild(chevron);
-			}
-		};
+				if (options.showChevron) {
+					const chevron = document.createElement('span');
+					chevron.dataset.docxidianExportChevron = 'true';
+					chevron.textContent = '›';
+					chevron.addClass('docxidian-export-chevron');
+					button.appendChild(chevron);
+				}
+			};
 
 		const addExportAsItem = () => {
 			if (!this.hostEl) {
@@ -2806,10 +2779,9 @@ export class DocxView extends FileView {
 					exportWrapper = sourceWrapper
 						? sourceWrapper.cloneNode(true) as HTMLElement
 						: document.createElement('div');
-					exportWrapper.dataset.docxidianExportAsMenuItem = 'true';
-					exportWrapper.style.position = exportWrapper.style.position || 'relative';
+						exportWrapper.dataset.docxidianExportAsMenuItem = 'true';
 
-					let exportButton = exportWrapper.querySelector('button');
+						let exportButton = exportWrapper.querySelector('button');
 					if (!exportButton) {
 						exportButton = document.createElement('button');
 						exportWrapper.appendChild(exportButton);

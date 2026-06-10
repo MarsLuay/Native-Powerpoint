@@ -13,7 +13,7 @@ import {
   validatePowerPointPackageStructure,
   type PowerPointPackageInspection
 } from './PowerPointPackage';
-import { sanitizeSvg, summarizeSvgSecurityIssues, type SvgSecurityIssue } from './SvgSecurity';
+import { createSvgElementFromString, sanitizeSvg, summarizeSvgSecurityIssues, type SvgSecurityIssue } from './SvgSecurity';
 import { applyBackgroundAwareTextHalos } from './TextHalo';
 import type { NativePowerPointSettings } from './settings';
 import type { ShapeTransform } from 'pptx-svg';
@@ -1167,9 +1167,15 @@ export class NativePowerPointView extends FileView {
       return false;
     }
 
+    const svgElement = createSvgElementFromString(safeSvg.svg, this.slideSurface.ownerDocument);
+    if (!svgElement) {
+      this.showError('Could not render this PowerPoint slide because its SVG preview could not be read.');
+      return false;
+    }
+
     this.slideSurface.empty();
-    this.slideSurface.innerHTML = safeSvg.svg;
-    this.svgEl = this.slideSurface.querySelector('svg');
+    this.slideSurface.appendChild(svgElement);
+    this.svgEl = svgElement;
 
     if (this.svgEl) {
       this.fontSubstitutions = this.engine.applyFontFidelity(this.svgEl);
@@ -1289,16 +1295,15 @@ export class NativePowerPointView extends FileView {
     if (!this.slideSurface) return;
 
     this.slideSurface.removeClass('is-rendered');
-    this.slideSurface.style.width = '';
-    this.slideSurface.style.height = '';
-    this.slideSurface.style.minWidth = '';
-    this.slideSurface.style.minHeight = '';
+    this.slideSurface.removeClass('is-scaled');
+    this.slideSurface.style.removeProperty('--native-powerpoint-slide-width');
+    this.slideSurface.style.removeProperty('--native-powerpoint-slide-height');
 
     if (this.svgEl) {
-      this.svgEl.style.width = '';
-      this.svgEl.style.height = '';
-      this.svgEl.style.transform = '';
-      this.svgEl.style.transformOrigin = '';
+      this.svgEl.style.removeProperty('width');
+      this.svgEl.style.removeProperty('height');
+      this.svgEl.style.removeProperty('transform');
+      this.svgEl.style.removeProperty('transform-origin');
     }
   }
 
@@ -1400,7 +1405,12 @@ export class NativePowerPointView extends FileView {
 
       const preview = item.createDiv({ cls: 'native-powerpoint-thumbnail-preview' });
       try {
-        preview.innerHTML = this.prepareSvgForRender(this.engine.renderSlide(index).svg, true).svg;
+        const safeSvg = this.prepareSvgForRender(this.engine.renderSlide(index).svg, true);
+        const thumbnailSvg = createSvgElementFromString(safeSvg.svg, preview.ownerDocument);
+        if (!thumbnailSvg) {
+          throw new Error('Could not read thumbnail SVG.');
+        }
+        preview.appendChild(thumbnailSvg);
       } catch {
         preview.createDiv({ cls: 'native-powerpoint-thumbnail-error', text: '!' });
       }
@@ -2371,7 +2381,7 @@ export class NativePowerPointView extends FileView {
 
     const box = this.getElementBox(element);
     if (!box) {
-      this.activeInlineCaret.style.display = 'none';
+      this.activeInlineCaret.addClass('native-powerpoint-inline-caret-hidden');
       return;
     }
 
@@ -2381,18 +2391,18 @@ export class NativePowerPointView extends FileView {
     const selectionStart = Math.max(0, Math.min(editor.selectionStart ?? editor.value.length, editor.value.length));
     const selectionEnd = Math.max(0, Math.min(editor.selectionEnd ?? editor.value.length, editor.value.length));
     if (selectionStart !== selectionEnd) {
-      this.activeInlineCaret.style.display = 'none';
+      this.activeInlineCaret.addClass('native-powerpoint-inline-caret-hidden');
       return;
     }
 
     const offset = selectionEnd;
     const geometry = this.getSvgInlineCaretGeometry(element, editor, offset, box);
     if (!geometry) {
-      this.activeInlineCaret.style.display = 'none';
+      this.activeInlineCaret.addClass('native-powerpoint-inline-caret-hidden');
       return;
     }
 
-    this.activeInlineCaret.style.display = '';
+    this.activeInlineCaret.removeClass('native-powerpoint-inline-caret-hidden');
     this.activeInlineCaret.setAttribute('x1', this.formatSvgNumber(geometry.x1));
     this.activeInlineCaret.setAttribute('y1', this.formatSvgNumber(geometry.y1));
     this.activeInlineCaret.setAttribute('x2', this.formatSvgNumber(geometry.x2));
@@ -3215,14 +3225,9 @@ export class NativePowerPointView extends FileView {
     const width = Math.max(1, Math.floor(size.width * scale));
     const height = Math.max(1, Math.floor(size.height * scale));
 
-    this.slideSurface.style.width = `${width}px`;
-    this.slideSurface.style.height = `${height}px`;
-    this.slideSurface.style.minWidth = '0';
-    this.slideSurface.style.minHeight = '0';
-    this.svgEl.style.width = `${width}px`;
-    this.svgEl.style.height = `${height}px`;
-    this.svgEl.style.transform = '';
-    this.svgEl.style.transformOrigin = '';
+    this.slideSurface.addClass('is-scaled');
+    this.slideSurface.style.setProperty('--native-powerpoint-slide-width', `${width}px`);
+    this.slideSurface.style.setProperty('--native-powerpoint-slide-height', `${height}px`);
     this.updateSelectionOverlay();
     this.refreshActiveInlineEditorGeometry();
   }

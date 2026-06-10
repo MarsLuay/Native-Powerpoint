@@ -1,4 +1,8 @@
 .workspace-leaf-content[data-type='docxidian-docx-view'] .view-content {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
 	overflow: hidden;
 	padding: 0;
 }
@@ -6,6 +10,7 @@
 .docxidian-host {
 	background: #f8fafc;
 	display: flex;
+	flex: 1 1 auto;
 	flex-direction: column;
 	height: 100%;
 	min-height: 0;
@@ -23,6 +28,14 @@
 .docxidian-host .ep-root,
 .docxidian-host .ep-root * {
 	box-sizing: border-box;
+}
+
+.docxidian-fixed-probe {
+	left: 0;
+	pointer-events: none;
+	position: fixed;
+	top: 0;
+	visibility: hidden;
 }
 
 .workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root {
@@ -215,6 +228,50 @@ body.theme-dark .docxidian-light-menu-surface :is(button:hover, button:focus, [r
 body.theme-dark [data-docxidian-mode-menu='true'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]) {
 	background: #f1f5f9 !important;
 	color: #0f172a !important;
+}
+
+body [data-docxidian-mode-menu='true'].docxidian-mode-menu-normalized {
+	min-width: 260px;
+	overflow: hidden;
+	padding: 4px 0;
+}
+
+body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-item {
+	align-items: center;
+	box-shadow: none !important;
+	column-gap: 10px;
+	display: grid !important;
+	grid-template-columns: 24px minmax(0, 1fr) 20px;
+	justify-content: start;
+	justify-items: start;
+	line-height: normal;
+	min-height: 48px;
+	padding: 8px 12px;
+	width: 100%;
+}
+
+body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-icon {
+	display: inline-flex;
+	flex: 0 0 20px;
+	grid-column: 1;
+	height: 20px;
+	justify-self: start;
+	margin-left: 0;
+	width: 20px;
+}
+
+body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-label {
+	flex: 1 1 auto;
+	grid-column: 2;
+	justify-self: stretch;
+	margin-left: 0;
+	min-width: 0;
+}
+
+body [data-docxidian-mode-menu='true'] .docxidian-mode-menu-check {
+	grid-column: 3;
+	justify-self: end;
+	margin-left: 0;
 }
 
 .docxidian-import-font-separator {
@@ -831,14 +888,36 @@ body.docxidian-editor-hovering > .fixed.z-50.bg-slate-900.rounded-md.shadow-lg:n
 	color: #ffffff;
 	font-size: 12px;
 	font-weight: 500;
+	left: var(--docxidian-toolbar-tooltip-left);
 	line-height: 1.25;
 	max-width: min(260px, calc(100vw - 16px));
 	padding: 5px 8px;
 	pointer-events: none;
 	position: fixed;
 	text-align: center;
+	top: var(--docxidian-toolbar-tooltip-top);
+	transform: translateX(-50%);
 	white-space: nowrap;
 	z-index: 100200;
+}
+
+.docxidian-toolbar-tooltip.is-left-aligned {
+	transform: translateX(0);
+}
+
+.docxidian-toolbar-tooltip.is-right-aligned {
+	transform: translateX(-100%);
+}
+
+.docxidian-touch-pinch-root {
+	touch-action: pan-x pan-y;
+}
+
+.docxidian-pdf-export-page {
+	box-shadow: none !important;
+	margin: 0 !important;
+	transform: none !important;
+	transform-origin: top left !important;
 }
 
 body .docxidian-find-dialog,
@@ -939,6 +1018,11 @@ body.theme-dark .docxidian-find-dialog button:focus:not(:disabled) {
 .docxidian-file-menu-item,
 .docxidian-export-menu-item {
 	position: relative;
+}
+
+.docxidian-export-chevron {
+	font-size: 14px;
+	margin-left: auto;
 }
 
 .workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button,
@@ -1648,8 +1732,22 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	overflow: hidden;
 }
 
+.native-powerpoint-slide-surface.is-scaled {
+	height: var(--native-powerpoint-slide-height);
+	min-height: 0;
+	min-width: 0;
+	width: var(--native-powerpoint-slide-width);
+}
+
 .native-powerpoint-slide-svg {
 	display: block;
+}
+
+.native-powerpoint-slide-surface.is-scaled .native-powerpoint-slide-svg {
+	height: var(--native-powerpoint-slide-height);
+	transform: none;
+	transform-origin: initial;
+	width: var(--native-powerpoint-slide-width);
 }
 
 .native-powerpoint-slide-svg text,
@@ -1695,6 +1793,10 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.95));
 	outline: 2px solid rgba(245, 158, 11, 0.95);
 	outline-offset: 2px;
+}
+
+.native-powerpoint-inline-caret-hidden {
+	display: none;
 }
 
 .native-powerpoint-selection-box {

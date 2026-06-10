@@ -577,10 +577,6 @@ async function renderPageElementToCanvasJpeg(page: HTMLElement) {
 		windowHeight: Math.max(document.documentElement.clientHeight, pageHeight),
 		onclone: (_clonedDocument, clonedPage) => {
 			clonedPage.classList.add('docxidian-pdf-export-page');
-			clonedPage.style.margin = '0';
-			clonedPage.style.boxShadow = 'none';
-			clonedPage.style.transform = 'none';
-			clonedPage.style.transformOrigin = 'top left';
 			clonedPage.querySelectorAll<HTMLElement>(`.${SELECTED_LIST_MARKER_CLASS}`).forEach((marker) => {
 				marker.classList.remove(SELECTED_LIST_MARKER_CLASS);
 			});
@@ -602,16 +598,13 @@ async function renderPageElementToSvgJpeg(page: HTMLElement, editorRoot: HTMLEle
 
 	const clone = page.cloneNode(true) as HTMLElement;
 	clone.classList.add('docxidian-pdf-export-page');
-	clone.style.margin = '0';
-	clone.style.boxShadow = 'none';
-	clone.style.transformOrigin = 'top left';
 
 	const exportCss = [
 		cssText,
 		'html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #ffffff; }',
 		'.docxidian-pdf-export-root { margin: 0; padding: 0; background: #ffffff; color: #000000; }',
 		'.docxidian-pdf-export-root .paged-editor__pages { margin: 0 !important; padding: 0 !important; display: block !important; }',
-		'.docxidian-pdf-export-page { margin: 0 !important; box-shadow: none !important; }',
+		'.docxidian-pdf-export-page { margin: 0 !important; box-shadow: none !important; transform: none !important; transform-origin: top left !important; }',
 		'.docxidian-pdf-export-root * { animation: none !important; transition: none !important; caret-color: transparent !important; }',
 		`.docxidian-pdf-export-root .${SELECTED_LIST_MARKER_CLASS} { background: transparent !important; outline: none !important; }`,
 	].join('\n');
@@ -812,4 +805,3 @@ export async function exportRenderedPagesToPdf(editorRoot: HTMLElement, rendered
 	});
 	return createRenderedImagePdf(renderedPages);
 }
-

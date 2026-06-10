@@ -1043,7 +1043,7 @@ const SaveButton = ({ onClick }: { onClick: () => void }) => {
 	const ref = useRef<HTMLButtonElement>(null);
 	useEffect(() => {
 		if (ref.current) {
-			ref.current.innerHTML = '';
+			ref.current.replaceChildren();
 			setIcon(ref.current, 'save');
 		}
 	}, []);
@@ -1593,9 +1593,7 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		modeMenus.forEach(({ menu, buttons }) => {
 			menu.dataset.docxidianModeMenu = 'true';
 			markLightMenuSurface(menu, 'docxidian-mode-menu');
-			menu.style.minWidth = '260px';
-			menu.style.padding = '4px 0';
-			menu.style.overflow = 'hidden';
+			menu.addClass('docxidian-mode-menu-normalized');
 
 			buttons.forEach((button) => {
 				const mode = getEditorModeFromButton(button);
@@ -1603,43 +1601,21 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 					button.dataset.docxidianModeMenuItem = mode;
 				}
 
-				button.style.alignItems = 'center';
-				button.style.boxShadow = 'none';
-				button.style.columnGap = '10px';
-				button.style.display = 'grid';
-				button.style.gridTemplateColumns = '24px minmax(0, 1fr) 20px';
-				button.style.justifyContent = 'start';
-				button.style.justifyItems = 'start';
-				button.style.lineHeight = 'normal';
-				button.style.minHeight = '48px';
-				button.style.padding = '8px 12px';
-				button.style.width = '100%';
+				button.addClass('docxidian-mode-menu-item');
 
 				const icon = button.querySelector<HTMLElement>(':scope > svg:first-child');
 				if (icon) {
-					icon.style.display = 'inline-flex';
-					icon.style.flex = '0 0 20px';
-					icon.style.gridColumn = '1';
-					icon.style.height = '20px';
-					icon.style.justifySelf = 'start';
-					icon.style.marginLeft = '0';
-					icon.style.width = '20px';
+					icon.addClass('docxidian-mode-menu-icon');
 				}
 
 				const labelColumn = button.querySelector<HTMLElement>(':scope > span');
 				if (labelColumn) {
-					labelColumn.style.flex = '1 1 auto';
-					labelColumn.style.gridColumn = '2';
-					labelColumn.style.justifySelf = 'stretch';
-					labelColumn.style.marginLeft = '0';
-					labelColumn.style.minWidth = '0';
+					labelColumn.addClass('docxidian-mode-menu-label');
 				}
 
 				const checkIcon = button.querySelector<HTMLElement>(':scope > svg:last-child:not(:first-child)');
 				if (checkIcon) {
-					checkIcon.style.gridColumn = '3';
-					checkIcon.style.justifySelf = 'end';
-					checkIcon.style.marginLeft = '0';
+					checkIcon.addClass('docxidian-mode-menu-check');
 				}
 			});
 		});
@@ -1814,10 +1790,8 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		}
 
 		const hostRoot = editorRoot.closest<HTMLElement>('.docxidian-host') ?? editorRoot;
-		const previousTouchAction = editorRoot.style.touchAction;
-		const previousHostTouchAction = hostRoot.style.touchAction;
-		editorRoot.style.touchAction = 'pan-x pan-y';
-		hostRoot.style.touchAction = 'pan-x pan-y';
+		editorRoot.addClass('docxidian-touch-pinch-root');
+		hostRoot.addClass('docxidian-touch-pinch-root');
 
 		const isEditorTarget = (target: EventTarget | null) => target instanceof Node && hostRoot.contains(target);
 
@@ -2062,8 +2036,8 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 		document.addEventListener('pointercancel', handlePointerEnd, { passive: true, capture: true });
 
 		return () => {
-			editorRoot.style.touchAction = previousTouchAction;
-			hostRoot.style.touchAction = previousHostTouchAction;
+			editorRoot.removeClass('docxidian-touch-pinch-root');
+			hostRoot.removeClass('docxidian-touch-pinch-root');
 			document.removeEventListener('touchstart', handleTouchStart, true);
 			document.removeEventListener('touchmove', handleTouchMove, true);
 			document.removeEventListener('touchend', handleTouchEnd, true);
@@ -2579,18 +2553,18 @@ export const DocxReactView = forwardRef<DocxReactViewHandle, DocxReactViewProps>
 
 		const positionTooltip = (target: HTMLElement, tooltip: HTMLDivElement) => {
 			const rect = target.getBoundingClientRect();
-			tooltip.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
-			tooltip.style.top = `${Math.round(rect.bottom + 8)}px`;
-			tooltip.style.transform = 'translateX(-50%)';
+			tooltip.style.setProperty('--docxidian-toolbar-tooltip-left', `${Math.round(rect.left + rect.width / 2)}px`);
+			tooltip.style.setProperty('--docxidian-toolbar-tooltip-top', `${Math.round(rect.bottom + 8)}px`);
+			tooltip.removeClasses(['is-left-aligned', 'is-right-aligned']);
 
 			const tooltipRect = tooltip.getBoundingClientRect();
 			const viewportPadding = 8;
 			if (tooltipRect.left < viewportPadding) {
-				tooltip.style.left = `${viewportPadding}px`;
-				tooltip.style.transform = 'translateX(0)';
+				tooltip.style.setProperty('--docxidian-toolbar-tooltip-left', `${viewportPadding}px`);
+				tooltip.addClass('is-left-aligned');
 			} else if (tooltipRect.right > window.innerWidth - viewportPadding) {
-				tooltip.style.left = `${window.innerWidth - viewportPadding}px`;
-				tooltip.style.transform = 'translateX(-100%)';
+				tooltip.style.setProperty('--docxidian-toolbar-tooltip-left', `${window.innerWidth - viewportPadding}px`);
+				tooltip.addClass('is-right-aligned');
 			}
 		};
 

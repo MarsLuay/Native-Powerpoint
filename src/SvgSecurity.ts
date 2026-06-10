@@ -239,6 +239,7 @@ const CASE_INSENSITIVE_COMPATIBILITY_ALLOWED_ATTRS = new Set(
   Array.from(COMPATIBILITY_ALLOWED_ATTRS, (attr) => attr.toLowerCase())
 );
 const URL_ATTRS = new Set(['href', 'xlink:href']);
+const SVG_MIME_TYPE = 'image/svg+xml';
 
 function addIssue(issues: SvgSecurityIssue[], reason: string, detail: string): void {
   issues.push({ reason, detail });
@@ -372,20 +373,45 @@ function sanitizeElement(element: Element, issues: SvgSecurityIssue[], mode: Svg
   }
 }
 
+function parseSvgDocument(svg: string): XMLDocument {
+  const parser = new DOMParser();
+  return parser.parseFromString(svg.trim(), SVG_MIME_TYPE);
+}
+
+function hasSvgParseError(parsed: XMLDocument): boolean {
+  return parsed.getElementsByTagName('parsererror').length > 0;
+}
+
 export function sanitizeSvg(svg: string, options: SanitizeSvgOptions = {}): SanitizedSvg {
-  const template = document.createElement('template');
   const issues: SvgSecurityIssue[] = [];
   const mode = options.mode || 'strict';
-  template.innerHTML = svg.trim();
+  const parsed = parseSvgDocument(svg);
+  const root = parsed.documentElement;
 
-  for (const child of Array.from(template.content.children)) {
-    sanitizeElement(child, issues, mode);
+  if (!root || hasSvgParseError(parsed)) {
+    addIssue(issues, 'Could not read slide SVG', 'The slide SVG could not be parsed.');
+    return {
+      svg: '',
+      issues
+    };
   }
 
+  sanitizeElement(root, issues, mode);
+
   return {
-    svg: template.innerHTML,
+    svg: root.isConnected ? new XMLSerializer().serializeToString(root) : '',
     issues
   };
+}
+
+export function createSvgElementFromString(svg: string, ownerDocument: Document): SVGSVGElement | null {
+  const parsed = parseSvgDocument(svg);
+  const root = parsed.documentElement;
+  if (!root || hasSvgParseError(parsed) || root.tagName.toLowerCase() !== 'svg') {
+    return null;
+  }
+
+  return ownerDocument.importNode(root, true) as unknown as SVGSVGElement;
 }
 
 export function summarizeSvgSecurityIssues(issues: SvgSecurityIssue[]): string[] {
