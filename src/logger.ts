@@ -10,7 +10,6 @@ export interface DocxidianLogEntry {
 
 const MAX_LOG_ENTRIES = 200;
 const LOG_PREFIX = '[Native PowerPoint Doc Editor]';
-const DEFAULT_LOG_FILE = 'Library/Logs/native-powerpoint-doc-editor.log';
 const LOG_STATE_KEY = '__nativePowerPointDocEditorLogState';
 
 interface DocxidianLogState {
@@ -92,27 +91,6 @@ function normalizeLogData(data: unknown): unknown {
 	return data;
 }
 
-function getLogFilePath() {
-	const home = typeof process !== 'undefined' ? process.env?.HOME : undefined;
-	return home ? `${home}/${DEFAULT_LOG_FILE}` : null;
-}
-
-function appendFileLog(entry: DocxidianLogEntry) {
-	const logFile = getLogFilePath();
-	if (!logFile) {
-		return;
-	}
-
-	try {
-		const fs = require('fs') as typeof import('fs');
-		const path = require('path') as typeof import('path');
-		fs.mkdirSync(path.dirname(logFile), { recursive: true });
-		fs.appendFileSync(logFile, `${JSON.stringify(entry)}\n`);
-	} catch {
-		// Console/in-memory logs are still available if file logging is blocked.
-	}
-}
-
 export function configureDocxidianLogger(enabled: boolean) {
 	getLogState().debugLoggingEnabled = enabled;
 	syncWindowLogState();
@@ -132,7 +110,6 @@ export function logDocxidian(level: DocxidianLogLevel, area: string, message: st
 	if (state.entries.length > MAX_LOG_ENTRIES) {
 		state.entries.splice(0, state.entries.length - MAX_LOG_ENTRIES);
 	}
-	appendFileLog(entry);
 	syncWindowLogState();
 
 	writeConsole(level, area, message, data);

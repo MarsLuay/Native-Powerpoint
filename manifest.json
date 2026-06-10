@@ -1,7 +1,7 @@
 {
 	"id": "native-powerpoint-doc-editor",
 	"name": "Native PowerPoint Doc Editor",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "Open, search, and edit DOCX and PPTX files directly in your vault.",
 	"author": "Marwan Luay",
