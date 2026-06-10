@@ -19,7 +19,7 @@ mkdir -p "${LOG_FILE:h}"
 : > "$LOG_FILE"
 
 log() {
-  print -r -- "[$(date '+%Y-%m-%d %H:%M:%S %z')] $*" | tee -a "$LOG_FILE"
+  print -r -- "[$(date '+%Y-%m-%d %H:%M:%S %z')] $*" | tee -a "$LOG_FILE" >&2
 }
 
 dialog() {
@@ -30,14 +30,14 @@ dialog() {
   message="${message//\\n/$newline}"
 
   if [[ "${NATIVE_POWERPOINT_INSTALLER_NO_DIALOG:-}" == "1" ]]; then
-    print -r -- "$message"
+    print -r -- "$message" >&2
     return 0
   fi
 
   if command -v osascript >/dev/null 2>&1; then
     osascript -e 'display dialog '"$(osascript_quote "$message")"' with title '"$(osascript_quote "$title")"' buttons {"OK"} default button "OK"' >/dev/null 2>&1 || true
   else
-    print -r -- "$message"
+    print -r -- "$message" >&2
   fi
 }
 
@@ -112,6 +112,71 @@ print_vault_if_valid() {
   print -r -- "${vault:A}"
 }
 
+prompt_create_obsidian_dir() {
+  local vault="$1"
+  local resolved="${vault:A}"
+  local answer
+
+  if command -v osascript >/dev/null 2>&1 && [[ "${NATIVE_POWERPOINT_INSTALLER_NO_DIALOG:-}" != "1" ]]; then
+    if osascript -e 'display dialog '"$(osascript_quote "The selected folder does not contain an .obsidian folder:\n${resolved}\n\nCreate .obsidian there and install the plugin into this folder?")"' with title "Install Native PowerPoint Doc Editor" buttons {"Choose Another Folder", "Create and Install"} default button "Create and Install" cancel button "Choose Another Folder"' >/dev/null 2>&1; then
+      mkdir -p "${resolved}/.obsidian"
+      print -r -- "$resolved"
+      return 0
+    fi
+
+    return 1
+  fi
+
+  print -r -- "The selected folder does not contain an .obsidian folder:" >&2
+  print -r -- "  $resolved" >&2
+  printf "Create .obsidian there and install into this folder? [y/N] " >&2
+  read -r answer
+  if [[ "$answer" == [Yy] || "$answer" == [Yy][Ee][Ss] ]]; then
+    mkdir -p "${resolved}/.obsidian"
+    print -r -- "$resolved"
+    return 0
+  fi
+
+  return 1
+}
+
+prompt_for_vault_folder() {
+  local reason="$1"
+  local selected
+  local resolved
+
+  log "$reason"
+
+  while true; do
+    selected=""
+
+    if command -v osascript >/dev/null 2>&1 && [[ "${NATIVE_POWERPOINT_INSTALLER_NO_DIALOG:-}" != "1" ]]; then
+      selected="$(osascript -e 'set selectedFolder to choose folder with prompt '"$(osascript_quote "${reason}\n\nChoose your Obsidian vault folder:")" -e 'return POSIX path of selectedFolder')" || fail "No Obsidian vault folder was selected."
+    else
+      print -r -- "$reason" >&2
+      printf "Enter the path to your Obsidian vault folder: " >&2
+      read -r selected
+      [[ -n "$selected" ]] || fail "No Obsidian vault folder was selected."
+    fi
+
+    if [[ ! -d "$selected" ]]; then
+      dialog "That folder does not exist:\n${selected}\n\nChoose an existing Obsidian vault folder." "Folder not found"
+      continue
+    fi
+
+    resolved="$(print_vault_if_valid "$selected")"
+    if [[ -n "$resolved" ]]; then
+      print -r -- "$resolved"
+      return 0
+    fi
+
+    if resolved="$(prompt_create_obsidian_dir "$selected")"; then
+      print -r -- "$resolved"
+      return 0
+    fi
+  done
+}
+
 discover_vaults() {
   local root
   local obsidian_dir
@@ -131,7 +196,7 @@ discover_vaults() {
 
   if [[ -n "${OBSIDIAN_VAULT:-}" ]]; then
     add_candidate "$OBSIDIAN_VAULT"
-    printf '%s\n' "${vaults[@]}"
+    (( ${#vaults[@]} > 0 )) && printf '%s\n' "${vaults[@]}"
     return 0
   fi
 
@@ -154,7 +219,7 @@ discover_vaults() {
       done
   done
 
-  printf '%s\n' "${vaults[@]}"
+  (( ${#vaults[@]} > 0 )) && printf '%s\n' "${vaults[@]}"
 }
 
 choose_vault() {
@@ -164,9 +229,13 @@ choose_vault() {
   local items=""
   local vault
   local index=1
+  local other_item="Choose another folder..."
+
+  vaults=("${(@)vaults:#}")
 
   if (( ${#vaults[@]} == 0 )); then
-    fail "No Obsidian vault folders were found. Set OBSIDIAN_VAULT to a vault path or move this plugin under an Obsidian vault."
+    prompt_for_vault_folder "No Obsidian vault folders were found automatically."
+    return 0
   fi
 
   if (( ${#vaults[@]} == 1 )); then
@@ -187,21 +256,33 @@ choose_vault() {
       fi
       items+="$(osascript_quote "$vault")"
     done
+    items+=", $(osascript_quote "$other_item")"
 
     selected="$(osascript -e 'set selectedVault to choose from list {'"$items"'} with title "Install Native PowerPoint Doc Editor" with prompt "Multiple Obsidian vaults were detected. Choose where to install Native PowerPoint/Doc Editor:" OK button name "Install" cancel button name "Cancel"' -e 'if selectedVault is false then error number -128' -e 'return item 1 of selectedVault')" || exit 1
+    if [[ "$selected" == "$other_item" ]]; then
+      prompt_for_vault_folder "Choose the Obsidian vault folder to install into."
+      return 0
+    fi
+
     print -r -- "$selected"
     return 0
   fi
 
-  print -r -- "Multiple Obsidian vaults were detected:"
+  print -r -- "Multiple Obsidian vaults were detected:" >&2
   index=1
   for vault in "${vaults[@]}"; do
-    print -r -- "  ${index}) ${vault}"
+    print -r -- "  ${index}) ${vault}" >&2
     index=$((index + 1))
   done
+  print -r -- "  b) Browse for another folder" >&2
 
-  printf "Choose vault number: "
+  printf "Choose vault number: " >&2
   read -r selected
+  if [[ "$selected" == [Bb] ]]; then
+    prompt_for_vault_folder "Choose the Obsidian vault folder to install into."
+    return 0
+  fi
+
   if [[ "$selected" != <-> || "$selected" -lt 1 || "$selected" -gt "${#vaults[@]}" ]]; then
     fail "Invalid vault selection."
   fi
@@ -209,34 +290,84 @@ choose_vault() {
   print -r -- "${vaults[$selected]}"
 }
 
-build_plugin_if_possible() {
-  if [[ ! -f "${PLUGIN_ROOT}/package.json" ]]; then
+ensure_npm_available() {
+  if command -v npm >/dev/null 2>&1; then
     return 0
   fi
 
-  if ! command -v npm >/dev/null 2>&1; then
-    if [[ -f "${PLUGIN_ROOT}/main.js" ]]; then
-      log "WARNING: npm was not found. Installing the already-built plugin files."
+  if command -v brew >/dev/null 2>&1; then
+    log "npm was not found. Installing Node.js with Homebrew."
+    if brew install node >>"$LOG_FILE" 2>&1; then
       return 0
     fi
 
-    fail "npm was not found and ${PLUGIN_ROOT}/main.js does not exist. Install Node.js LTS, then run this installer again."
+    log "WARNING: Homebrew could not install Node.js. See log for details."
   fi
 
-  if [[ ! -d "${PLUGIN_ROOT}/node_modules" ]]; then
-    if [[ -f "${PLUGIN_ROOT}/package-lock.json" ]]; then
-      log "Installing npm dependencies with npm ci."
-      (cd "$PLUGIN_ROOT" && npm ci) >>"$LOG_FILE" 2>&1
-    else
-      log "Installing npm dependencies with npm install."
-      (cd "$PLUGIN_ROOT" && npm install) >>"$LOG_FILE" 2>&1
-    fi
-  else
+  return 1
+}
+
+install_node_dependencies() {
+  if [[ -d "${PLUGIN_ROOT}/node_modules" ]]; then
     log "npm dependencies already present."
+    return 0
   fi
+
+  if [[ -f "${PLUGIN_ROOT}/package-lock.json" ]]; then
+    log "Installing npm dependencies with npm ci."
+    if (cd "$PLUGIN_ROOT" && npm ci) >>"$LOG_FILE" 2>&1; then
+      return 0
+    fi
+
+    log "WARNING: npm ci failed. Trying npm install instead."
+  else
+    log "Installing npm dependencies with npm install."
+  fi
+
+  if ! (cd "$PLUGIN_ROOT" && npm install) >>"$LOG_FILE" 2>&1; then
+    fail "Could not install npm dependencies. See log: ${LOG_FILE}"
+  fi
+}
+
+verify_release_files() {
+  local missing=()
+  local file
+
+  for file in manifest.json main.js docx-editor.js styles.css; do
+    if [[ ! -f "${PLUGIN_ROOT}/${file}" ]]; then
+      missing+=("$file")
+    fi
+  done
+
+  if (( ${#missing[@]} > 0 )); then
+    fail "The plugin build is missing required file(s): ${(j:, :)missing}. See log: ${LOG_FILE}"
+  fi
+}
+
+build_plugin_if_possible() {
+  if [[ ! -f "${PLUGIN_ROOT}/package.json" ]]; then
+    verify_release_files
+    return 0
+  fi
+
+  if ! ensure_npm_available; then
+    if [[ -f "${PLUGIN_ROOT}/main.js" ]]; then
+      log "WARNING: npm was not found. Installing the already-built plugin files."
+      verify_release_files
+      return 0
+    fi
+
+    fail "npm was not found and ${PLUGIN_ROOT}/main.js does not exist. Install Node.js LTS from https://nodejs.org/, then run this installer again."
+  fi
+
+  install_node_dependencies
 
   log "Building ${PLUGIN_NAME}."
-  (cd "$PLUGIN_ROOT" && npm run build) >>"$LOG_FILE" 2>&1
+  if ! (cd "$PLUGIN_ROOT" && npm run build) >>"$LOG_FILE" 2>&1; then
+    fail "Could not build ${PLUGIN_NAME}. See log: ${LOG_FILE}"
+  fi
+
+  verify_release_files
 }
 
 update_enabled_plugins() {
@@ -354,6 +485,7 @@ main() {
   fi
 
   vaults=("${(@f)$(discover_vaults)}")
+  vaults=("${(@)vaults:#}")
   vault="$(choose_vault "${vaults[@]}")"
 
   log "Selected Obsidian vault: ${vault}"

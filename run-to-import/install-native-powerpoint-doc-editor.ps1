@@ -43,6 +43,36 @@ function Add-NodeInstallPathsToProcessPath {
     }
 }
 
+function Install-NodeRuntime {
+    if ($env:OS -ne "Windows_NT") {
+        throw "Node.js/npm is required. Install Node.js LTS from https://nodejs.org/ and run this installer again."
+    }
+
+    $winget = Get-Command "winget" -ErrorAction SilentlyContinue
+    if (-not $winget) {
+        throw "Node.js/npm is required, but winget was not found. Install Node.js LTS from https://nodejs.org/ and run this installer again."
+    }
+
+    Write-Log "Node.js/npm was not found. Installing Node.js LTS with winget..."
+    & $winget.Source install --id OpenJS.NodeJS.LTS --exact --source winget --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -ne 0) {
+        throw "winget failed to install Node.js LTS. Exit code: $LASTEXITCODE"
+    }
+
+    Add-NodeInstallPathsToProcessPath
+}
+
+function Get-NpmCommand {
+    Add-NodeInstallPathsToProcessPath
+
+    $npm = Get-Command "npm.cmd" -ErrorAction SilentlyContinue
+    if (-not $npm) {
+        $npm = Get-Command "npm" -ErrorAction SilentlyContinue
+    }
+
+    return $npm
+}
+
 function Get-ManifestValue {
     param(
         [string]$ManifestFile,
@@ -85,6 +115,83 @@ function Add-VaultCandidate {
         if (-not $Vaults.Contains($resolved)) {
             [void]$Vaults.Add($resolved)
         }
+    }
+}
+
+function Resolve-InstallVault {
+    param([string]$Candidate)
+
+    if (-not $Candidate) {
+        return $null
+    }
+
+    $expanded = [Environment]::ExpandEnvironmentVariables($Candidate.Trim('"'))
+    if (-not (Test-Path $expanded)) {
+        Write-Host "Folder not found: $expanded"
+        return $null
+    }
+
+    $resolved = (Resolve-Path $expanded).Path
+    $obsidianDir = Join-Path $resolved ".obsidian"
+    if (Test-Path $obsidianDir) {
+        return $resolved
+    }
+
+    Write-Host ""
+    Write-Host "The selected folder does not contain an .obsidian folder:"
+    Write-Host "  $resolved"
+    $answer = Read-Host "Create .obsidian there and install into this folder? [y/N]"
+    if ($answer -match "^(y|yes)$") {
+        New-Item -ItemType Directory -Force -Path $obsidianDir | Out-Null
+        return $resolved
+    }
+
+    return $null
+}
+
+function Select-FolderWithDialog {
+    param([string]$Description)
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = $Description
+        $dialog.ShowNewFolderButton = $true
+
+        $result = $dialog.ShowDialog()
+        if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+            return $dialog.SelectedPath
+        }
+    } catch {
+        Write-Log "WARNING: Windows folder picker is unavailable: $($_.Exception.Message)"
+    }
+
+    return ""
+}
+
+function Prompt-ForVaultFolder {
+    param([string]$Reason)
+
+    Write-Host ""
+    Write-Host $Reason
+
+    while ($true) {
+        $candidate = Select-FolderWithDialog "Choose the Obsidian vault folder to install Native PowerPoint/Doc Editor into."
+
+        if (-not $candidate) {
+            $candidate = Read-Host "Enter the path to your Obsidian vault folder, or leave blank to cancel"
+        }
+
+        if (-not $candidate) {
+            throw "No Obsidian vault folder was selected."
+        }
+
+        $resolved = Resolve-InstallVault $candidate
+        if ($resolved) {
+            return $resolved
+        }
+
+        Write-Host "Choose another folder."
     }
 }
 
@@ -146,7 +253,7 @@ function Select-ObsidianVault {
     param([string[]]$Vaults)
 
     if ($Vaults.Count -eq 0) {
-        throw "No Obsidian vault folders were found. Set OBSIDIAN_VAULT or pass -VaultPath with a vault path."
+        return Prompt-ForVaultFolder "No Obsidian vault folders were found automatically."
     }
 
     if ($Vaults.Count -eq 1) {
@@ -158,9 +265,14 @@ function Select-ObsidianVault {
     for ($i = 0; $i -lt $Vaults.Count; $i++) {
         Write-Host ("  {0}) {1}" -f ($i + 1), $Vaults[$i])
     }
+    Write-Host "  B) Browse for another folder"
 
     while ($true) {
         $answer = Read-Host "Enter a number"
+        if ($answer -match "^(b|browse)$") {
+            return Prompt-ForVaultFolder "Choose the Obsidian vault folder to install into."
+        }
+
         $selected = 0
         if ([int]::TryParse($answer, [ref]$selected) -and $selected -ge 1 -and $selected -le $Vaults.Count) {
             return $Vaults[$selected - 1]
@@ -218,30 +330,26 @@ function Invoke-LoggedCommand {
     }
 }
 
-function Build-PluginIfPossible {
-    if ($NoBuild -or (-not (Test-Path (Join-Path $PluginRoot "package.json")))) {
-        return
-    }
-
-    Add-NodeInstallPathsToProcessPath
-    $npm = Get-Command "npm.cmd" -ErrorAction SilentlyContinue
+function Install-NodeDependencies {
+    $npm = Get-NpmCommand
     if (-not $npm) {
-        $npm = Get-Command "npm" -ErrorAction SilentlyContinue
+        Install-NodeRuntime
+        $npm = Get-NpmCommand
     }
 
     if (-not $npm) {
-        if (Test-Path (Join-Path $PluginRoot "main.js")) {
-            Write-Log "WARNING: npm was not found. Installing the already-built plugin files."
-            return
-        }
-
-        throw "npm was not found and main.js does not exist. Install Node.js LTS, then run this installer again."
+        throw "npm is still unavailable after attempting to install Node.js. Install Node.js LTS from https://nodejs.org/ and run this installer again."
     }
 
     if (-not (Test-Path (Join-Path $PluginRoot "node_modules"))) {
         if (Test-Path (Join-Path $PluginRoot "package-lock.json")) {
             Write-Log "Installing npm dependencies with npm ci."
-            Invoke-LoggedCommand $npm.Source @("ci") $PluginRoot
+            try {
+                Invoke-LoggedCommand $npm.Source @("ci") $PluginRoot
+            } catch {
+                Write-Log "WARNING: npm ci failed. Trying npm install instead."
+                Invoke-LoggedCommand $npm.Source @("install") $PluginRoot
+            }
         } else {
             Write-Log "Installing npm dependencies with npm install."
             Invoke-LoggedCommand $npm.Source @("install") $PluginRoot
@@ -250,10 +358,54 @@ function Build-PluginIfPossible {
         Write-Log "npm dependencies already present."
     }
 
+    return $npm
+}
+
+function Assert-ReleaseFilesPresent {
+    $requiredFiles = @("manifest.json", "main.js", "docx-editor.js", "styles.css")
+    $missing = @()
+
+    foreach ($fileName in $requiredFiles) {
+        if (-not (Test-Path (Join-Path $PluginRoot $fileName))) {
+            $missing += $fileName
+        }
+    }
+
+    if ($missing.Count -gt 0) {
+        throw "The plugin build is missing required file(s): $($missing -join ', '). See log: $LogFile"
+    }
+}
+
+function Build-PluginIfPossible {
+    if ($NoBuild -or (-not (Test-Path (Join-Path $PluginRoot "package.json")))) {
+        Assert-ReleaseFilesPresent
+        return
+    }
+
+    $npm = Get-NpmCommand
+    if (-not $npm) {
+        try {
+            Install-NodeRuntime
+            $npm = Get-NpmCommand
+        } catch {
+            if (Test-Path (Join-Path $PluginRoot "main.js")) {
+                Write-Log "WARNING: npm was not found. Installing the already-built plugin files. $($_.Exception.Message)"
+                Assert-ReleaseFilesPresent
+                return
+            }
+
+            throw
+        }
+    }
+
+    $npm = Install-NodeDependencies
+
     if (Test-PackageScript (Join-Path $PluginRoot "package.json") "build") {
         Write-Log "Building $PluginName."
         Invoke-LoggedCommand $npm.Source @("run", "build") $PluginRoot
     }
+
+    Assert-ReleaseFilesPresent
 }
 
 function Get-EnabledPluginIds {
