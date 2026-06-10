@@ -1,0 +1,9 @@
+{
+	"id": "native-powerpoint-doc-editor",
+	"name": "Native PowerPoint/Doc Editor",
+	"version": "0.0.5",
+	"minAppVersion": "0.15.0",
+	"description": "Native docx/pptx viewer + editor. Not reviewed by mods",
+	"author": "Mars",
+	"isDesktopOnly": false
+}

@@ -1,0 +1,368 @@
+#!/bin/zsh
+
+set -euo pipefail
+setopt null_glob
+
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+SCRIPT_DIR="${0:A:h}"
+APP_DIR="${SCRIPT_DIR:h:h}"
+RUN_TO_IMPORT_DIR="${APP_DIR:h}"
+PLUGIN_ROOT="${RUN_TO_IMPORT_DIR:h}"
+PLUGIN_MANIFEST="${PLUGIN_ROOT}/manifest.json"
+PLUGIN_ID="native-powerpoint-doc-editor"
+PLUGIN_NAME="Native PowerPoint/Doc Editor"
+LOG_FILE="${HOME}/Library/Logs/native-powerpoint-doc-editor-install.log"
+OBSOLETE_PLUGIN_IDS=(native-powerpoint docxidian)
+
+mkdir -p "${LOG_FILE:h}"
+: > "$LOG_FILE"
+
+log() {
+  print -r -- "[$(date '+%Y-%m-%d %H:%M:%S %z')] $*" | tee -a "$LOG_FILE"
+}
+
+dialog() {
+  local message="$1"
+  local title="${2:-Install Native PowerPoint Doc Editor}"
+  local newline=$'\n'
+
+  message="${message//\\n/$newline}"
+
+  if [[ "${NATIVE_POWERPOINT_INSTALLER_NO_DIALOG:-}" == "1" ]]; then
+    print -r -- "$message"
+    return 0
+  fi
+
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e 'display dialog '"$(osascript_quote "$message")"' with title '"$(osascript_quote "$title")"' buttons {"OK"} default button "OK"' >/dev/null 2>&1 || true
+  else
+    print -r -- "$message"
+  fi
+}
+
+fail() {
+  local message="$1"
+  log "ERROR: $message"
+  dialog "${message}\n\nLog: ${LOG_FILE}" "Native PowerPoint install failed"
+  exit 1
+}
+
+osascript_quote() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '"%s"' "$value"
+}
+
+json_value() {
+  local file="$1"
+  local key="$2"
+
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+const fs = require("fs");
+const file = process.argv[1];
+const key = process.argv[2];
+const value = JSON.parse(fs.readFileSync(file, "utf8"))[key];
+process.stdout.write(value == null ? "" : String(value));
+' "$file" "$key"
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$file" "$key" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = json.load(handle).get(sys.argv[2], "")
+print("" if value is None else value, end="")
+PY
+    return
+  fi
+
+  sed -nE 's/^[[:space:]]*"'"$key"'"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/p' "$file" | head -n 1
+}
+
+dedupe_lines() {
+  awk '!seen[$0]++'
+}
+
+is_skipped_path() {
+  local path="$1"
+
+  [[ "$path" == *"/.Trash/"* ]] && return 0
+  [[ "$path" == *"/node_modules/"* ]] && return 0
+  [[ "$path" == *"/Library/Caches/"* ]] && return 0
+  [[ "$path" == *"/Library/Application Support/"* ]] && return 0
+  return 1
+}
+
+print_vault_if_valid() {
+  local vault="$1"
+
+  [[ -n "$vault" ]] || return 0
+  [[ -d "${vault}/.obsidian" ]] || return 0
+
+  if is_skipped_path "${vault}/.obsidian"; then
+    return 0
+  fi
+
+  print -r -- "${vault:A}"
+}
+
+discover_vaults() {
+  local root
+  local obsidian_dir
+  local current
+  local search_roots=()
+  local vaults=()
+
+  add_candidate() {
+    local resolved
+    resolved="$(print_vault_if_valid "$1")"
+    [[ -n "$resolved" ]] || return 0
+
+    if (( ${vaults[(Ie)$resolved]} == 0 )); then
+      vaults+=("$resolved")
+    fi
+  }
+
+  if [[ -n "${OBSIDIAN_VAULT:-}" ]]; then
+    add_candidate "$OBSIDIAN_VAULT"
+    printf '%s\n' "${vaults[@]}"
+    return 0
+  fi
+
+  current="$PLUGIN_ROOT"
+  while [[ "$current" != "/" && -n "$current" ]]; do
+    add_candidate "$current"
+    current="${current:h}"
+  done
+
+  search_roots+=("$HOME" "$HOME/Documents" "$HOME/Desktop" "$HOME/ObsidianNotes")
+  search_roots+=("$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents")
+
+  for root in "${search_roots[@]}"; do
+    [[ -d "$root" ]] || continue
+    find "$root" -maxdepth 5 -type d -name ".obsidian" -print 2>/dev/null |
+      while IFS= read -r obsidian_dir; do
+        if ! is_skipped_path "$obsidian_dir"; then
+          add_candidate "${obsidian_dir:h}"
+        fi
+      done
+  done
+
+  printf '%s\n' "${vaults[@]}"
+}
+
+choose_vault() {
+  local vaults=("$@")
+  local prompt
+  local selected
+  local items=""
+  local vault
+  local index=1
+
+  if (( ${#vaults[@]} == 0 )); then
+    fail "No Obsidian vault folders were found. Set OBSIDIAN_VAULT to a vault path or move this plugin under an Obsidian vault."
+  fi
+
+  if (( ${#vaults[@]} == 1 )); then
+    print -r -- "${vaults[1]}"
+    return 0
+  fi
+
+  log "Multiple Obsidian vaults detected:"
+  for vault in "${vaults[@]}"; do
+    log "  ${index}. ${vault}"
+    index=$((index + 1))
+  done
+
+  if command -v osascript >/dev/null 2>&1; then
+    for vault in "${vaults[@]}"; do
+      if [[ -n "$items" ]]; then
+        items+=", "
+      fi
+      items+="$(osascript_quote "$vault")"
+    done
+
+    selected="$(osascript -e 'set selectedVault to choose from list {'"$items"'} with title "Install Native PowerPoint Doc Editor" with prompt "Multiple Obsidian vaults were detected. Choose where to install Native PowerPoint/Doc Editor:" OK button name "Install" cancel button name "Cancel"' -e 'if selectedVault is false then error number -128' -e 'return item 1 of selectedVault')" || exit 1
+    print -r -- "$selected"
+    return 0
+  fi
+
+  print -r -- "Multiple Obsidian vaults were detected:"
+  index=1
+  for vault in "${vaults[@]}"; do
+    print -r -- "  ${index}) ${vault}"
+    index=$((index + 1))
+  done
+
+  printf "Choose vault number: "
+  read -r selected
+  if [[ "$selected" != <-> || "$selected" -lt 1 || "$selected" -gt "${#vaults[@]}" ]]; then
+    fail "Invalid vault selection."
+  fi
+
+  print -r -- "${vaults[$selected]}"
+}
+
+build_plugin_if_possible() {
+  if [[ ! -f "${PLUGIN_ROOT}/package.json" ]]; then
+    return 0
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    if [[ -f "${PLUGIN_ROOT}/main.js" ]]; then
+      log "WARNING: npm was not found. Installing the already-built plugin files."
+      return 0
+    fi
+
+    fail "npm was not found and ${PLUGIN_ROOT}/main.js does not exist. Install Node.js LTS, then run this installer again."
+  fi
+
+  if [[ ! -d "${PLUGIN_ROOT}/node_modules" ]]; then
+    if [[ -f "${PLUGIN_ROOT}/package-lock.json" ]]; then
+      log "Installing npm dependencies with npm ci."
+      (cd "$PLUGIN_ROOT" && npm ci) >>"$LOG_FILE" 2>&1
+    else
+      log "Installing npm dependencies with npm install."
+      (cd "$PLUGIN_ROOT" && npm install) >>"$LOG_FILE" 2>&1
+    fi
+  else
+    log "npm dependencies already present."
+  fi
+
+  log "Building ${PLUGIN_NAME}."
+  (cd "$PLUGIN_ROOT" && npm run build) >>"$LOG_FILE" 2>&1
+}
+
+update_enabled_plugins() {
+  local community_file="$1"
+  local plugin_id="$2"
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$community_file" "$plugin_id" "${OBSOLETE_PLUGIN_IDS[@]}" <<'PY'
+import json
+import pathlib
+import sys
+
+community_file = pathlib.Path(sys.argv[1])
+plugin_id = sys.argv[2]
+obsolete_ids = set(sys.argv[3:])
+enabled = []
+
+if community_file.exists() and community_file.read_text(encoding="utf-8").strip():
+    parsed = json.loads(community_file.read_text(encoding="utf-8"))
+    if not isinstance(parsed, list):
+        raise SystemExit(f"{community_file} must contain a JSON array.")
+    enabled = [value for value in parsed if isinstance(value, str) and value not in obsolete_ids]
+
+if plugin_id not in enabled:
+    enabled.append(plugin_id)
+
+community_file.parent.mkdir(parents=True, exist_ok=True)
+community_file.write_text(json.dumps(enabled, indent=2) + "\n", encoding="utf-8")
+PY
+    return
+  fi
+
+  if command -v node >/dev/null 2>&1; then
+    node - "$community_file" "$plugin_id" "${OBSOLETE_PLUGIN_IDS[@]}" <<'NODE'
+const fs = require("fs");
+const file = process.argv[2];
+const pluginId = process.argv[3];
+const obsoleteIds = new Set(process.argv.slice(4));
+let enabled = [];
+
+if (fs.existsSync(file)) {
+  const raw = fs.readFileSync(file, "utf8").trim();
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      throw new Error(`${file} must contain a JSON array.`);
+    }
+    enabled = parsed.filter((value) => typeof value === "string" && !obsoleteIds.has(value));
+  }
+}
+
+if (!enabled.includes(pluginId)) {
+  enabled.push(pluginId);
+}
+
+fs.mkdirSync(require("path").dirname(file), { recursive: true });
+fs.writeFileSync(file, `${JSON.stringify(enabled, null, 2)}\n`);
+NODE
+    return
+  fi
+
+  fail "Could not update community-plugins.json because neither python3 nor node is available."
+}
+
+install_plugin() {
+  local vault="$1"
+  local plugins_dir="${vault}/.obsidian/plugins"
+  local target_dir="${plugins_dir}/${PLUGIN_ID}"
+  local community_file="${vault}/.obsidian/community-plugins.json"
+  local file
+  local copied=0
+  local obsolete_id
+
+  mkdir -p "$target_dir"
+
+  for obsolete_id in "${OBSOLETE_PLUGIN_IDS[@]}"; do
+    if [[ -d "${plugins_dir}/${obsolete_id}" ]]; then
+      rm -rf -- "${plugins_dir}/${obsolete_id}"
+      log "Removed obsolete plugin install: ${plugins_dir}/${obsolete_id}"
+    fi
+  done
+
+  for file in "${PLUGIN_ROOT}/manifest.json" "${PLUGIN_ROOT}"/*.js "${PLUGIN_ROOT}"/*.css; do
+    [[ -f "$file" ]] || continue
+    cp -f "$file" "$target_dir/"
+    chmod 644 "${target_dir}/${file:t}" 2>/dev/null || true
+    copied=$((copied + 1))
+  done
+
+  if [[ ! -f "${target_dir}/manifest.json" || ! -f "${target_dir}/main.js" ]]; then
+    fail "Installed plugin is missing manifest.json or main.js: ${target_dir}"
+  fi
+
+  update_enabled_plugins "$community_file" "$PLUGIN_ID"
+  log "Installed ${PLUGIN_ID} to ${target_dir} (${copied} file(s); existing data.json preserved)."
+}
+
+main() {
+  local manifest_id
+  local manifest_name
+  local vault
+  local vaults
+
+  [[ -f "$PLUGIN_MANIFEST" ]] || fail "Could not find plugin manifest: ${PLUGIN_MANIFEST}"
+
+  manifest_id="$(json_value "$PLUGIN_MANIFEST" id)"
+  manifest_name="$(json_value "$PLUGIN_MANIFEST" name)"
+
+  if [[ -n "$manifest_id" ]]; then
+    PLUGIN_ID="$manifest_id"
+  fi
+
+  if [[ -n "$manifest_name" ]]; then
+    PLUGIN_NAME="$manifest_name"
+  fi
+
+  vaults=("${(@f)$(discover_vaults)}")
+  vault="$(choose_vault "${vaults[@]}")"
+
+  log "Selected Obsidian vault: ${vault}"
+  log "Plugin root: ${PLUGIN_ROOT}"
+
+  build_plugin_if_possible
+  install_plugin "$vault"
+
+  dialog "${PLUGIN_NAME} was installed and enabled in:\n${vault}\n\nReload Obsidian or disable/re-enable the plugin to pick up changes.\n\nLog: ${LOG_FILE}" "Native PowerPoint install complete"
+}
+
+main "$@"

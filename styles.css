@@ -1,0 +1,2101 @@
+.workspace-leaf-content[data-type='docxidian-docx-view'] .view-content {
+	overflow: hidden;
+	padding: 0;
+}
+
+.docxidian-host {
+	background: #f8fafc;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+	width: 100%;
+}
+
+.docxidian-host > .ep-root {
+	flex: 1;
+	height: 100%;
+	min-height: 0;
+	width: 100%;
+}
+
+.docxidian-host .ep-root,
+.docxidian-host .ep-root * {
+	box-sizing: border-box;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root {
+	--doc-bg: #ffffff !important;
+	--doc-bg-hover: #f1f5f9 !important;
+	--doc-border: #d1d5db !important;
+	--doc-border-light: #e2e8f0 !important;
+	--doc-hover: #f1f5f9 !important;
+	--doc-text: #202124 !important;
+	--doc-text-muted: #5f6368 !important;
+}
+
+.docxidian-host .ep-root button,
+.docxidian-host .ep-root input,
+.docxidian-host .ep-root select,
+.docxidian-host .ep-root textarea {
+	font: inherit;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root button {
+	appearance: none;
+	box-shadow: none;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root button:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root button:focus,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root button:active {
+	box-shadow: none;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] button.h-7.w-7,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-list-button {
+	background-color: transparent;
+	border-color: transparent;
+	border-style: solid;
+	border-width: 0;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] button.h-7.w-7:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] button.h-7.w-7:focus,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-list-button:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-list-button:focus {
+	background-color: rgba(241, 245, 249, 0.8);
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] button.h-7.w-7[aria-pressed='true'],
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-list-button-active {
+	background-color: var(--doc-primary-light);
+}
+
+.docxidian-host .ep-root .docxidian-find-match {
+	background-color: rgba(250, 204, 21, 0.45);
+	border-radius: 2px;
+}
+
+.docxidian-host .ep-root .docxidian-find-current {
+	background-color: rgba(249, 115, 22, 0.58);
+	border-radius: 2px;
+	outline: 1px solid rgba(234, 88, 12, 0.85);
+}
+
+.docxidian-host .ep-root .docx-text-context-menu {
+	transform: translate(
+		calc(-1 * var(--docxidian-fixed-left-offset, 0px)),
+		calc(-1 * var(--docxidian-fixed-top-offset, 0px))
+	);
+}
+
+.docxidian-host .ep-root [style*='position: fixed'] {
+	--docxidian-fixed-correction: translate(
+		calc(-1 * var(--docxidian-fixed-left-offset, 0px)),
+		calc(-1 * var(--docxidian-fixed-top-offset, 0px))
+	);
+	transform: var(--docxidian-fixed-correction);
+}
+
+.docxidian-host .ep-root [style*='position: fixed'][style*='transform'] {
+	transform: var(--docxidian-fixed-correction) var(--docxidian-existing-transform, none);
+}
+
+.docxidian-host .ep-root [style*='position: fixed']:has(> [role='dialog']) {
+	inset: 0 !important;
+	transform: none !important;
+}
+
+.docxidian-host .ep-root [data-testid='editor-toolbar'] {
+	isolation: isolate;
+	position: relative;
+	z-index: 100010 !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'],
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] > div:nth-child(2),
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] > div:nth-child(2) > div:first-child {
+	min-width: 0;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] > div:nth-child(2) > div:first-child {
+	flex: 1 1 auto;
+	width: 100%;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] input.truncate,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='title-bar'] span.truncate {
+	flex: 1 1 auto;
+	max-width: none !important;
+	min-width: 0 !important;
+	width: 100%;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] {
+	color: #0f172a;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] input,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] select,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] textarea {
+	background: #ffffff !important;
+	border-color: #cbd5e1 !important;
+	color: #0f172a !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] option {
+	background: #ffffff;
+	color: #0f172a;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] button {
+	background-color: #ffffff;
+	border-color: #cbd5e1;
+	color: #0f172a;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] button:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='dialog'] button:focus {
+	background-color: #f8fafc;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] {
+	background: #ffffff !important;
+	border-color: #e2e8f0 !important;
+	color: #1e293b !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option'] {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+	color: #334155 !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] button:focus,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option']:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='listbox'] [role='option']:focus,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='option'][aria-selected='true'],
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='editor-toolbar'] [role='option'][data-highlighted] {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='font-size-display'],
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [data-testid='font-size-input'] {
+	color: #0f172a !important;
+}
+
+body .docxidian-light-menu-shell,
+body .docxidian-light-menu-surface,
+body [data-docxidian-mode-menu='true'] {
+	background: #ffffff !important;
+	border-color: #d1d5db !important;
+	color: #0f172a !important;
+	color-scheme: light;
+}
+
+body .docxidian-light-menu-surface :is(button, [role='menuitem'], [role='option']),
+body [data-docxidian-mode-menu='true'] :is(button, [role='menuitem'], [role='option']),
+body.theme-dark .docxidian-light-menu-surface :is(button, [role='menuitem'], [role='option']),
+body.theme-dark [data-docxidian-mode-menu='true'] :is(button, [role='menuitem'], [role='option']) {
+	background: transparent !important;
+	border-color: transparent !important;
+	box-shadow: none !important;
+	color: #334155 !important;
+}
+
+body .docxidian-light-menu-surface :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
+body [data-docxidian-mode-menu='true'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
+body.theme-dark .docxidian-light-menu-surface :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]),
+body.theme-dark [data-docxidian-mode-menu='true'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [aria-selected='true'], [data-highlighted]) {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+}
+
+.docxidian-import-font-separator {
+	background: #e2e8f0 !important;
+	height: 1px;
+	margin: 4px 0;
+}
+
+body .docxidian-import-font-option,
+body.theme-dark .docxidian-import-font-option {
+	align-items: center;
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 4px;
+	box-shadow: none !important;
+	color: #0f172a !important;
+	cursor: pointer;
+	display: flex;
+	font-size: 13px;
+	gap: 8px;
+	min-height: 32px;
+	padding: 6px 8px;
+	text-align: left;
+	width: 100%;
+}
+
+body .docxidian-import-font-option:hover,
+body .docxidian-import-font-option:focus,
+body.theme-dark .docxidian-import-font-option:hover,
+body.theme-dark .docxidian-import-font-option:focus {
+	background: #f1f5f9 !important;
+	outline: none;
+}
+
+.docxidian-custom-table-separator {
+	background: #e2e8f0 !important;
+	height: 1px;
+	margin: 8px 0 4px;
+}
+
+body .docxidian-custom-table-option,
+body.theme-dark .docxidian-custom-table-option {
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 4px;
+	box-shadow: none !important;
+	color: #0f172a !important;
+	cursor: pointer;
+	font-size: 13px;
+	min-height: 30px;
+	padding: 6px 8px;
+	text-align: left;
+	width: 100%;
+}
+
+body .docxidian-custom-table-option:hover,
+body .docxidian-custom-table-option:focus,
+body.theme-dark .docxidian-custom-table-option:hover,
+body.theme-dark .docxidian-custom-table-option:focus {
+	background: #f1f5f9 !important;
+	outline: none;
+}
+
+.docxidian-custom-table-backdrop {
+	align-items: center;
+	background: rgba(15, 23, 42, 0.28);
+	display: flex;
+	inset: 0;
+	justify-content: center;
+	padding: 20px;
+	position: fixed;
+	z-index: 100070;
+}
+
+.docxidian-custom-table-dialog {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 8px;
+	box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+	color: #0f172a !important;
+	color-scheme: light;
+	display: grid;
+	gap: 12px;
+	min-width: 260px;
+	padding: 14px;
+}
+
+.docxidian-custom-table-title {
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.docxidian-custom-table-field {
+	align-items: center;
+	display: grid;
+	gap: 10px;
+	grid-template-columns: 80px 1fr;
+}
+
+.docxidian-custom-table-field span {
+	color: #475569;
+	font-size: 13px;
+}
+
+.docxidian-custom-table-field input {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 6px;
+	color: #0f172a !important;
+	font-size: 13px;
+	height: 32px;
+	padding: 4px 8px;
+	width: 100%;
+}
+
+.docxidian-custom-table-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 2px;
+}
+
+.docxidian-custom-table-actions button {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 6px;
+	color: #0f172a !important;
+	cursor: pointer;
+	font-size: 13px;
+	height: 32px;
+	padding: 0 12px;
+}
+
+.docxidian-custom-table-actions button:hover,
+.docxidian-custom-table-actions button:focus {
+	background: #f8fafc !important;
+	outline: none;
+}
+
+.docxidian-custom-table-actions .docxidian-custom-table-primary {
+	background: #2563eb !important;
+	border-color: #2563eb !important;
+	color: #ffffff !important;
+}
+
+.docxidian-custom-table-actions .docxidian-custom-table-primary:hover,
+.docxidian-custom-table-actions .docxidian-custom-table-primary:focus {
+	background: #1d4ed8 !important;
+	border-color: #1d4ed8 !important;
+}
+
+/* Match the editor's header/footer behavior so typed spaces stay visible in body text. */
+.docxidian-host .ep-root .layout-page-content .ProseMirror p,
+.docxidian-host .ep-root .docx-run-editable[contenteditable='true'] {
+	white-space: pre-wrap;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .layout-list-marker,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .layout-list-marker-line,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-list-marker {
+	-webkit-user-select: text !important;
+	cursor: text !important;
+	user-select: text !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-list-marker-selected {
+	background: rgba(26, 115, 232, 0.3) !important;
+	border-radius: 2px;
+	color: inherit !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button {
+	align-items: center;
+	background: transparent;
+	border: none;
+	border-radius: 4px;
+	box-shadow: none;
+	color: var(--doc-text, #374151);
+	cursor: pointer;
+	display: flex;
+	font-size: 13px;
+	font-weight: 400;
+	height: 28px;
+	line-height: 28px;
+	padding: 2px 8px;
+	white-space: nowrap;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-search-menu-button:focus {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+	outline: none;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-menu,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-menu {
+	background: #ffffff !important;
+	border: 1px solid #d1d5db !important;
+	border-radius: 6px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+	color: #0f172a !important;
+	color-scheme: light;
+	left: 0;
+	max-height: min(70vh, 620px);
+	min-width: min(420px, calc(100vw - 32px));
+	overflow-y: auto;
+	padding: 8px;
+	position: absolute;
+	top: calc(100% + 4px);
+	z-index: 100060;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-section,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-section {
+	color: #475569 !important;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0;
+	margin: 8px 4px 4px;
+	text-transform: uppercase;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-row {
+	align-items: center;
+	background: transparent !important;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	box-sizing: border-box;
+	color: #0f172a !important;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 7px 8px;
+	width: 100%;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-row:focus-within,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-row:hover,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-row:focus-within {
+	background: #f8fafc !important;
+	border-color: #e2e8f0;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-copy {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-label,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-label {
+	color: #0f172a !important;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-desc,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-desc {
+	color: #64748b !important;
+	font-size: 11px;
+	line-height: 1.3;
+	max-width: 260px;
+	white-space: normal;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-checkbox,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-checkbox {
+	color-scheme: light;
+	flex: 0 0 auto;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-inline-controls {
+	align-items: center;
+	display: flex;
+	flex: 0 0 auto;
+	gap: 6px;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-input,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-select,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-input,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-select {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 5px;
+	box-shadow: none !important;
+	color: #0f172a !important;
+	font-size: 12px;
+	height: 30px;
+	min-width: 126px;
+	padding: 4px 7px;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-action {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 5px;
+	box-shadow: none !important;
+	color: #0f172a !important;
+	cursor: pointer;
+	flex: 0 0 auto;
+	font-size: 12px;
+	font-weight: 500;
+	height: 30px;
+	padding: 4px 9px;
+	white-space: nowrap;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-editor-settings-action:focus,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-action:hover,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-editor-settings-action:focus {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+	outline: none;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	[data-testid='editor-toolbar']
+	button:is([aria-label*='image' i], [aria-label*='picture' i], [title*='image' i], [title*='picture' i]) {
+	display: none !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	[data-testid='editor-toolbar']
+	button:is([aria-label='Search editor options'], [title='Search editor options']) {
+	display: none !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-menu,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-option-search-menu {
+	background: #ffffff !important;
+	border: 1px solid #d1d5db !important;
+	border-radius: 6px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+	color: #0f172a !important;
+	color-scheme: light;
+	left: 0;
+	min-width: 260px;
+	padding: 6px;
+	position: absolute;
+	top: calc(100% + 4px);
+	z-index: 100050;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-input,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-option-search-input {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 5px;
+	box-shadow: none !important;
+	color: #0f172a !important;
+	font-size: 12px;
+	height: 28px;
+	margin: 0 0 4px;
+	padding: 4px 7px;
+	width: 100%;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-results {
+	display: grid;
+	gap: 2px;
+	max-height: 260px;
+	overflow: auto;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-option-search-result {
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 4px;
+	box-shadow: none !important;
+	color: #334155 !important;
+	cursor: pointer;
+	justify-content: flex-start;
+	font-size: 12px;
+	line-height: 1.35;
+	min-height: 28px;
+	padding: 6px 8px;
+	text-align: left;
+	white-space: nowrap;
+	width: 100%;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result:focus,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-result[aria-selected='true'],
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-option-search-result:hover,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-option-search-result:focus,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-option-search-result[aria-selected='true'] {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-option-search-empty {
+	color: #64748b;
+	font-size: 12px;
+	padding: 8px;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'],
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] {
+	background: #ffffff !important;
+	border-color: #d1d5db !important;
+	color: #0f172a !important;
+	isolation: isolate;
+	opacity: 1 !important;
+	z-index: 100020 !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] :is(button, [role='menuitem'], [role='option']),
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] :is(button, [role='menuitem'], [role='option']) {
+	background: transparent !important;
+	box-shadow: none !important;
+	color: #334155 !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]),
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: absolute'] :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]) {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docx-outline-nav {
+	z-index: 1 !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root:has([role='menubar'] [style*='position: fixed'], [role='menubar'] [style*='position: absolute'])
+	.docx-outline-nav {
+	opacity: 0 !important;
+	pointer-events: none !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root [role='menubar'] [style*='position: fixed'] > div:first-child {
+	display: none;
+}
+
+.docxidian-embed {
+	background: transparent;
+	display: block;
+	margin: 1em 0;
+	max-width: 100%;
+	min-height: 0;
+	overflow: visible;
+	width: 100%;
+}
+
+.docxidian-embed-host {
+	display: block;
+	min-height: 1px;
+	width: 100%;
+}
+
+.docxidian-embed-viewport {
+	max-height: min(70vh, var(--docxidian-embed-page-height, 720px));
+	max-width: 100%;
+	overflow: auto;
+	width: fit-content;
+}
+
+.docxidian-embed-pages {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	width: fit-content;
+}
+
+.docxidian-embed-pages .layout-page {
+	flex: 0 0 auto;
+}
+
+.docxidian-embed-source {
+	height: 1px;
+	left: -100000px;
+	overflow: hidden;
+	pointer-events: none;
+	position: fixed;
+	top: 0;
+	visibility: hidden;
+	width: 1200px;
+}
+
+.docxidian-embed-loading,
+.docxidian-embed-error {
+	align-items: center;
+	color: var(--text-muted);
+	display: flex;
+	font-size: var(--font-ui-small);
+	height: 100%;
+	justify-content: center;
+	padding: 16px;
+	text-align: center;
+}
+
+.docxidian-embed-error {
+	color: var(--text-error);
+}
+
+body > .ep-root,
+.ep-root [data-radix-popper-content-wrapper] {
+	z-index: 100000;
+}
+
+/* Hide the editor's tooltip; Docxidian positions its own labels after toolbar scroll. */
+.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.fixed.z-50.bg-slate-900.rounded-md.shadow-lg:not([role]),
+body.docxidian-editor-hovering
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.fixed.z-50.bg-slate-900.rounded-md.shadow-lg:not([role]) {
+	display: none !important;
+	pointer-events: none !important;
+}
+
+body.docxidian-editor-hovering > .fixed.z-50.bg-slate-900.rounded-md.shadow-lg:not([role]) {
+	display: none !important;
+	pointer-events: none !important;
+}
+
+.docxidian-toolbar-tooltip {
+	background: #0f172a;
+	border-radius: 5px;
+	box-shadow: 0 8px 22px rgba(15, 23, 42, 0.22);
+	color: #ffffff;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.25;
+	max-width: min(260px, calc(100vw - 16px));
+	padding: 5px 8px;
+	pointer-events: none;
+	position: fixed;
+	text-align: center;
+	white-space: nowrap;
+	z-index: 100200;
+}
+
+body .docxidian-find-dialog,
+body.theme-dark .docxidian-find-dialog {
+	background: #ffffff !important;
+	border-color: #d1d5db !important;
+	color: #0f172a !important;
+	color-scheme: light;
+}
+
+body .docxidian-find-dialog input:not([type='checkbox']),
+body.theme-dark .docxidian-find-dialog input:not([type='checkbox']) {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 6px;
+	box-shadow: none !important;
+	color: #0f172a !important;
+	padding: 4px 8px;
+}
+
+body .docxidian-find-dialog input[type='checkbox'],
+body.theme-dark .docxidian-find-dialog input[type='checkbox'] {
+	color-scheme: light;
+}
+
+body .docxidian-find-dialog button,
+body.theme-dark .docxidian-find-dialog button {
+	background: #ffffff !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 6px;
+	box-shadow: none !important;
+	color: #0f172a !important;
+	min-height: 28px;
+}
+
+body .docxidian-find-dialog button:hover:not(:disabled),
+body .docxidian-find-dialog button:focus:not(:disabled),
+body.theme-dark .docxidian-find-dialog button:hover:not(:disabled),
+body.theme-dark .docxidian-find-dialog button:focus:not(:disabled) {
+	background: #f1f5f9 !important;
+	outline: none;
+}
+
+.docxidian-unsaved-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 20px;
+}
+
+.docxidian-path-form {
+	margin-top: 14px;
+}
+
+.docxidian-export-field {
+	display: grid;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.docxidian-export-field span {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.docxidian-path-input {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	box-sizing: border-box;
+	color: var(--text-normal);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	height: 34px;
+	padding: 6px 8px;
+	width: 100%;
+}
+
+.docxidian-path-select {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	box-sizing: border-box;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	height: 34px;
+	padding: 6px 8px;
+	width: 100%;
+}
+
+.docxidian-path-input:focus,
+.docxidian-path-select:focus {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+	outline: none;
+}
+
+.docxidian-file-menu-item,
+.docxidian-export-menu-item {
+	position: relative;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-file-menu-button {
+	align-items: center;
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 4px;
+	box-shadow: none !important;
+	color: #334155 !important;
+	cursor: pointer;
+	display: flex !important;
+	font-size: 12px;
+	justify-content: flex-start;
+	line-height: 1.35;
+	min-height: 28px;
+	padding: 6px 8px;
+	text-align: left;
+	white-space: nowrap;
+	width: 100%;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button *,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-file-menu-button * {
+	color: inherit !important;
+}
+
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button:hover,
+.workspace-leaf-content[data-type='docxidian-docx-view'] .docxidian-host .ep-root .docxidian-file-menu-button:focus,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-file-menu-button:hover,
+body.theme-dark
+	.workspace-leaf-content[data-type='docxidian-docx-view']
+	.docxidian-host
+	.ep-root
+	.docxidian-file-menu-button:focus {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+	outline: none;
+}
+
+body .docxidian-export-submenu,
+body.theme-dark .docxidian-export-submenu {
+	background: #ffffff !important;
+	border: 1px solid var(--doc-border, #d1d5db) !important;
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+	color: #0f172a !important;
+	color-scheme: light;
+	display: none;
+	left: calc(100% + 2px);
+	min-width: 230px;
+	padding: 4px 0;
+	position: absolute;
+	top: 0;
+	z-index: 10005;
+}
+
+body .docxidian-export-submenu :is(button, [role='menuitem'], [role='option']),
+body.theme-dark .docxidian-export-submenu :is(button, [role='menuitem'], [role='option']) {
+	background: transparent !important;
+	box-shadow: none !important;
+	color: #334155 !important;
+}
+
+body .docxidian-export-submenu :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]),
+body.theme-dark .docxidian-export-submenu :is(button:hover, button:focus, [role='menuitem']:hover, [role='menuitem']:focus, [role='option']:hover, [role='option']:focus, [data-highlighted]) {
+	background: #f1f5f9 !important;
+	color: #0f172a !important;
+}
+
+.docxidian-export-menu-item:hover > .docxidian-export-submenu,
+.docxidian-export-menu-item:focus-within > .docxidian-export-submenu {
+	display: block;
+}
+
+.docxidian-setting-value {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-variant-numeric: tabular-nums;
+	min-width: 42px;
+	text-align: right;
+}
+
+.docxidian-title-save-button {
+	align-items: center;
+	background: var(--interactive-accent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--text-on-accent);
+	cursor: pointer;
+	display: inline-flex;
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	height: 28px;
+	padding: 0 12px;
+	white-space: nowrap;
+}
+
+.docxidian-title-save-button:hover,
+.docxidian-title-save-button:focus {
+	background: var(--interactive-accent-hover);
+}
+
+.docxidian-save-status {
+	align-items: center;
+	color: var(--text-muted);
+	display: inline-flex;
+	font-size: var(--font-ui-smaller);
+	font-weight: 500;
+	gap: 6px;
+	line-height: 1;
+	margin-left: 8px;
+	min-width: 72px;
+	white-space: nowrap;
+}
+
+.docxidian-save-status-dot {
+	background: currentColor;
+	border-radius: 50%;
+	height: 6px;
+	width: 6px;
+}
+
+.docxidian-save-status-saved {
+	color: var(--text-muted);
+}
+
+.docxidian-save-status-saving {
+	color: var(--text-accent);
+}
+
+.docxidian-save-status-unsaved {
+	color: var(--text-warning);
+}
+
+.docxidian-save-status-failed {
+	color: var(--text-error);
+}
+
+.docxidian-search-modal {
+	min-width: min(720px, 90vw);
+}
+
+.docxidian-search-toolbar {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.docxidian-search-input {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	box-sizing: border-box;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	height: 34px;
+	padding: 6px 8px;
+	width: 100%;
+}
+
+.docxidian-search-input:focus {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+	outline: none;
+}
+
+.docxidian-search-status {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	margin-bottom: 10px;
+}
+
+.docxidian-search-results {
+	display: grid;
+	gap: 8px;
+	max-height: min(520px, 60vh);
+	overflow: auto;
+	padding-right: 2px;
+}
+
+.docxidian-search-empty {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	padding: 14px 0;
+}
+
+.docxidian-search-result {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+	padding: 10px;
+}
+
+.docxidian-search-result:hover,
+.docxidian-search-result:focus {
+	background: var(--background-modifier-hover);
+	outline: none;
+}
+
+.docxidian-search-result-title-row {
+	align-items: baseline;
+	display: flex;
+	gap: 10px;
+	justify-content: space-between;
+}
+
+.docxidian-search-result-title {
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.docxidian-search-result-count {
+	color: var(--text-muted);
+	flex: 0 0 auto;
+	font-size: var(--font-ui-smaller);
+}
+
+.docxidian-search-result-path {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	margin-top: 2px;
+	overflow-wrap: anywhere;
+}
+
+.docxidian-search-snippet {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	line-height: 1.45;
+	margin-top: 8px;
+	overflow-wrap: anywhere;
+}
+
+body .docxidian-hidden-text-shell,
+body.theme-dark .docxidian-hidden-text-shell {
+	background: #ffffff !important;
+	border: 1px solid #d1d5db;
+	border-radius: 8px;
+	box-sizing: border-box;
+	box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+	color: #0f172a !important;
+	color-scheme: light;
+	max-height: min(760px, calc(100vh - 80px));
+	max-width: min(760px, calc(100vw - 32px));
+	overflow: hidden;
+	position: relative;
+	width: min(760px, calc(100vw - 32px));
+}
+
+body .docxidian-hidden-text-shell .modal-close-button,
+body.theme-dark .docxidian-hidden-text-shell .modal-close-button {
+	align-items: center;
+	color: #64748b !important;
+	display: flex;
+	height: 28px;
+	justify-content: center;
+	right: 12px;
+	top: 12px;
+	width: 28px;
+	z-index: 2;
+}
+
+body .docxidian-hidden-text-shell .modal-close-button:hover,
+body.theme-dark .docxidian-hidden-text-shell .modal-close-button:hover {
+	background: #f1f5f9;
+	color: #0f172a !important;
+}
+
+body .docxidian-hidden-text-modal,
+body.theme-dark .docxidian-hidden-text-modal {
+	box-sizing: border-box;
+	color: #0f172a !important;
+	display: flex;
+	flex-direction: column;
+	max-height: calc(min(760px, 100vh - 80px) - 32px);
+	min-height: 0;
+	min-width: 0;
+	overflow: hidden;
+	width: 100%;
+}
+
+body .docxidian-hidden-text-modal h2,
+body.theme-dark .docxidian-hidden-text-modal h2 {
+	color: #0f172a !important;
+	font-size: 18px;
+	font-weight: 650;
+	line-height: 1.25;
+	margin: 0 28px 8px 0;
+}
+
+body .docxidian-hidden-text-summary,
+body.theme-dark .docxidian-hidden-text-summary {
+	color: #475569 !important;
+	font-size: var(--font-ui-small);
+	line-height: 1.45;
+	margin: 0 0 14px;
+}
+
+body .docxidian-hidden-text-empty,
+body.theme-dark .docxidian-hidden-text-empty {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	padding: 12px;
+}
+
+.docxidian-hidden-text-results {
+	display: grid;
+	gap: 8px;
+	max-height: min(560px, 62vh);
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding-right: 2px;
+}
+
+body .docxidian-hidden-text-result,
+body.theme-dark .docxidian-hidden-text-result {
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	min-width: 0;
+	overflow: hidden;
+	padding: 10px 12px;
+}
+
+.docxidian-hidden-text-header {
+	align-items: baseline;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: space-between;
+	min-width: 0;
+}
+
+.docxidian-hidden-text-location {
+	color: #0f172a;
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.docxidian-hidden-text-path {
+	color: #64748b;
+	font-size: var(--font-ui-smaller);
+	min-width: 0;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.docxidian-hidden-text-reasons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 8px;
+}
+
+body .docxidian-hidden-text-reason,
+body.theme-dark .docxidian-hidden-text-reason {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 4px;
+	color: #475569;
+	font-size: var(--font-ui-smaller);
+	line-height: 1;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	padding: 5px 8px;
+	word-break: break-word;
+}
+
+body .docxidian-hidden-text-reason.mod-warning,
+body.theme-dark .docxidian-hidden-text-reason.mod-warning {
+	background: #fff7ed;
+	border-color: #fed7aa;
+	color: #9a3412;
+}
+
+body .docxidian-hidden-text-snippet,
+body.theme-dark .docxidian-hidden-text-snippet {
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+	color: #0f172a;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-small);
+	line-height: 1.45;
+	margin: 10px 0 0;
+	max-height: 180px;
+	max-width: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
+	padding: 10px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.workspace-leaf-content[data-type='native-powerpoint-view'] .view-content {
+	overflow: hidden;
+	padding: 0;
+}
+
+.native-powerpoint-view {
+	height: 100%;
+	min-height: 0;
+}
+
+.native-powerpoint-root,
+.native-powerpoint-layout {
+	display: flex;
+	height: 100%;
+	min-height: 0;
+	width: 100%;
+}
+
+.native-powerpoint-root {
+	background: var(--background-primary);
+}
+
+.native-powerpoint-sidebar {
+	background: var(--background-secondary);
+	border-right: 1px solid var(--background-modifier-border);
+	display: flex;
+	flex: 0 0 152px;
+	flex-direction: column;
+	min-width: 152px;
+	overflow: hidden;
+}
+
+.native-powerpoint-sidebar-header {
+	align-items: center;
+	border-bottom: 1px solid var(--background-modifier-border);
+	color: var(--text-normal);
+	display: flex;
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	height: 36px;
+	justify-content: space-between;
+	padding: 0 10px;
+}
+
+.native-powerpoint-sidebar-hint {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: 500;
+}
+
+.native-powerpoint-thumbnails {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 8px;
+}
+
+.native-powerpoint-thumbnail {
+	background: transparent;
+	border: 2px solid transparent;
+	border-radius: 6px;
+	cursor: pointer;
+	margin-bottom: 8px;
+	padding: 4px;
+	position: relative;
+}
+
+.native-powerpoint-thumbnail:hover {
+	border-color: var(--background-modifier-border-hover);
+}
+
+.native-powerpoint-thumbnail.active {
+	border-color: var(--interactive-accent);
+}
+
+.native-powerpoint-thumbnail-preview {
+	aspect-ratio: 16 / 9;
+	background: white;
+	border-radius: 3px;
+	overflow: hidden;
+	width: 100%;
+}
+
+.native-powerpoint-thumbnail-svg {
+	display: block;
+	height: 100%;
+	width: 100%;
+}
+
+.native-powerpoint-thumbnail-number {
+	background: rgba(0, 0, 0, 0.62);
+	border-radius: 3px;
+	bottom: 7px;
+	color: white;
+	font-size: 10px;
+	line-height: 1;
+	padding: 3px 5px;
+	position: absolute;
+	right: 7px;
+}
+
+.native-powerpoint-thumbnail-error {
+	align-items: center;
+	color: var(--text-error);
+	display: flex;
+	height: 100%;
+	justify-content: center;
+}
+
+.native-powerpoint-main-content {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.native-powerpoint-toolbar {
+	align-items: center;
+	background: var(--background-secondary);
+	border-bottom: 1px solid var(--background-modifier-border);
+	display: flex;
+	flex: 0 0 auto;
+	gap: 10px;
+	min-height: 38px;
+	overflow-x: auto;
+	padding: 4px 10px;
+}
+
+.native-powerpoint-toolbar-group {
+	align-items: center;
+	display: flex;
+	flex: 0 0 auto;
+	gap: 3px;
+}
+
+.native-powerpoint-toolbar-btn {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--text-muted);
+	cursor: pointer;
+	display: inline-flex;
+	height: 28px;
+	justify-content: center;
+	padding: 0;
+	width: 28px;
+}
+
+.native-powerpoint-toolbar-btn:hover,
+.native-powerpoint-toolbar-btn:focus {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.native-powerpoint-toolbar-btn:disabled,
+.native-powerpoint-toolbar-btn.is-disabled {
+	color: var(--text-faint);
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.native-powerpoint-page-counter {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	min-width: 58px;
+	text-align: center;
+}
+
+.native-powerpoint-find-panel {
+	align-items: center;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	display: none;
+	flex: 0 0 auto;
+	gap: 4px;
+	min-height: 30px;
+	padding: 2px 4px;
+}
+
+.native-powerpoint-find-panel.is-open {
+	display: inline-flex;
+}
+
+.native-powerpoint-find-input {
+	background: var(--background-primary);
+	border: 0;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	height: 24px;
+	min-width: 180px;
+	outline: none;
+	padding: 0 6px;
+}
+
+.native-powerpoint-find-status {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	min-width: 92px;
+	overflow: hidden;
+	text-align: center;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.native-powerpoint-find-btn {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--text-muted);
+	cursor: pointer;
+	display: inline-flex;
+	height: 24px;
+	justify-content: center;
+	padding: 0;
+	width: 24px;
+}
+
+.native-powerpoint-find-btn:hover,
+.native-powerpoint-find-btn:focus {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.native-powerpoint-save-status {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin-left: auto;
+	white-space: nowrap;
+}
+
+.native-powerpoint-save-status[data-state='dirty'] {
+	color: var(--text-accent);
+}
+
+.native-powerpoint-save-status[data-state='saving'] {
+	color: var(--text-warning);
+}
+
+.native-powerpoint-save-status[data-state='saved'] {
+	color: var(--text-success);
+}
+
+.native-powerpoint-save-status[data-state='failed'] {
+	color: var(--text-error);
+}
+
+.native-powerpoint-save-status[data-state='recovered'] {
+	color: var(--text-warning);
+}
+
+.native-powerpoint-save-status[data-state='view-only'] {
+	color: var(--text-muted);
+}
+
+.native-powerpoint-canvas-pane {
+	align-items: center;
+	align-items: safe center;
+	background: var(--background-primary);
+	display: flex;
+	flex: 1 1 auto;
+	justify-content: center;
+	justify-content: safe center;
+	min-height: 0;
+	overflow: auto;
+	padding: 28px;
+	position: relative;
+}
+
+.native-powerpoint-slide-surface {
+	background: white;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+	color: black;
+	flex: 0 0 auto;
+	min-height: 320px;
+	min-width: 560px;
+	position: relative;
+}
+
+.native-powerpoint-slide-surface.is-rendered {
+	min-height: 0;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.native-powerpoint-slide-svg {
+	display: block;
+}
+
+.native-powerpoint-slide-svg text,
+.native-powerpoint-slide-svg tspan {
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.native-powerpoint-slide-svg g[data-ooxml-shape-idx] {
+	cursor: pointer;
+}
+
+.native-powerpoint-slide-svg .native-powerpoint-editable-text {
+	cursor: text;
+}
+
+.native-powerpoint-slide-svg .native-powerpoint-editable-text:hover {
+	filter: drop-shadow(0 0 1px var(--interactive-accent));
+}
+
+.native-powerpoint-slide-svg .native-powerpoint-generated-readonly {
+	cursor: help;
+}
+
+.native-powerpoint-slide-svg .native-powerpoint-text-editing,
+.native-powerpoint-slide-svg .native-powerpoint-text-editing:hover,
+.native-powerpoint-slide-surface.is-inline-text-editing .native-powerpoint-shape-selected {
+	filter: none;
+}
+
+.native-powerpoint-grid-label {
+	paint-order: stroke fill;
+	stroke: var(--native-powerpoint-text-halo, rgba(255, 255, 255, 0.88));
+	stroke-linejoin: round;
+	stroke-width: 1.35px;
+}
+
+.native-powerpoint-slide-svg .native-powerpoint-shape-selected {
+	filter: drop-shadow(0 0 2px var(--interactive-accent));
+}
+
+.native-powerpoint-slide-svg .native-powerpoint-find-current {
+	filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.95));
+	outline: 2px solid rgba(245, 158, 11, 0.95);
+	outline-offset: 2px;
+}
+
+.native-powerpoint-selection-box {
+	border: 2px solid var(--interactive-accent);
+	box-sizing: border-box;
+	pointer-events: none;
+	position: absolute;
+	z-index: 5;
+}
+
+.native-powerpoint-resize-handle {
+	background: var(--interactive-accent);
+	border: 2px solid var(--background-primary);
+	border-radius: 50%;
+	box-sizing: border-box;
+	height: 10px;
+	pointer-events: auto;
+	position: absolute;
+	width: 10px;
+}
+
+.native-powerpoint-resize-nw {
+	cursor: nwse-resize;
+	left: -6px;
+	top: -6px;
+}
+
+.native-powerpoint-resize-ne {
+	cursor: nesw-resize;
+	right: -6px;
+	top: -6px;
+}
+
+.native-powerpoint-resize-sw {
+	bottom: -6px;
+	cursor: nesw-resize;
+	left: -6px;
+}
+
+.native-powerpoint-resize-se {
+	bottom: -6px;
+	cursor: nwse-resize;
+	right: -6px;
+}
+
+.native-powerpoint-inline-editor {
+	background: var(--background-primary);
+	border: 2px solid var(--interactive-accent);
+	border-radius: 4px;
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+	color: var(--text-normal);
+	font: inherit;
+	padding: 8px;
+	position: absolute;
+	resize: both;
+	z-index: 10;
+}
+
+.native-powerpoint-inline-editor.is-text-run {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	box-sizing: border-box;
+	caret-color: transparent;
+	color: transparent !important;
+	opacity: 0;
+	overflow: hidden;
+	padding: 0 2px;
+	pointer-events: none;
+	resize: none;
+	scrollbar-width: none;
+	-webkit-text-fill-color: transparent;
+}
+
+.native-powerpoint-inline-editor.is-text-run:focus {
+	outline: none;
+}
+
+.native-powerpoint-inline-editor.is-text-run::selection {
+	background: transparent;
+}
+
+.native-powerpoint-svg-caret {
+	animation: native-powerpoint-caret-blink 1s steps(1, end) infinite;
+	pointer-events: none;
+	stroke: #000;
+	stroke-linecap: square;
+}
+
+.native-powerpoint-svg-selection {
+	fill: rgba(38, 132, 255, 0.28);
+	pointer-events: none;
+}
+
+@keyframes native-powerpoint-caret-blink {
+	0%,
+	55% {
+		opacity: 1;
+	}
+
+	56%,
+	100% {
+		opacity: 0;
+	}
+}
+
+.native-powerpoint-inspector {
+	background: var(--background-secondary);
+	border-left: 1px solid var(--background-modifier-border);
+	flex: 0 0 240px;
+	min-width: 240px;
+	overflow-y: auto;
+	padding: 12px;
+}
+
+.native-powerpoint-inspector-title {
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	font-weight: 700;
+	margin-bottom: 12px;
+}
+
+.native-powerpoint-inspector-subtitle {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	margin-bottom: 8px;
+}
+
+.native-powerpoint-inspector-hint {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.4;
+	margin-bottom: 10px;
+}
+
+.native-powerpoint-font-fidelity {
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 12px;
+	padding-bottom: 4px;
+}
+
+.native-powerpoint-font-substitution-list {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	margin-bottom: 10px;
+}
+
+.native-powerpoint-font-substitution {
+	align-items: center;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 5px;
+	color: var(--text-muted);
+	display: grid;
+	font-size: var(--font-ui-smaller);
+	gap: 5px;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	padding: 5px 6px;
+}
+
+.native-powerpoint-font-substitution-source,
+.native-powerpoint-font-substitution-target {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.native-powerpoint-font-substitution-target {
+	color: var(--text-normal);
+}
+
+.native-powerpoint-font-substitution-arrow {
+	color: var(--text-faint);
+}
+
+.native-powerpoint-inspector-empty,
+.native-powerpoint-loading,
+.native-powerpoint-error {
+	align-items: center;
+	color: var(--text-muted);
+	display: flex;
+	font-size: var(--font-ui-small);
+	height: 100%;
+	justify-content: center;
+	line-height: 1.5;
+	padding: 18px;
+	text-align: center;
+}
+
+.native-powerpoint-error {
+	color: var(--text-error);
+}
+
+.native-powerpoint-security-warning {
+	color: var(--text-normal);
+	margin: 48px auto;
+	max-width: 560px;
+	padding: 0 24px;
+}
+
+.native-powerpoint-security-title {
+	color: var(--text-error);
+	font-size: var(--font-ui-large);
+	font-weight: 700;
+	margin-bottom: 10px;
+}
+
+.native-powerpoint-security-warning p {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	line-height: 1.45;
+	margin: 0 0 14px;
+}
+
+.native-powerpoint-security-list {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	margin: 0 0 18px;
+	padding-left: 18px;
+}
+
+.native-powerpoint-security-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.native-powerpoint-security-actions button {
+	font-size: var(--font-ui-small);
+}
+
+.native-powerpoint-view-only-warning {
+	background: var(--background-modifier-error, var(--background-secondary-alt));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	line-height: 1.4;
+	margin-bottom: 12px;
+	padding: 8px 10px;
+}
+
+.native-powerpoint-template-box {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	margin-top: 18px;
+	padding: 14px;
+}
+
+.native-powerpoint-template-title {
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.native-powerpoint-template-desc {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	line-height: 1.4;
+	margin-bottom: 10px;
+}
+
+.native-powerpoint-template-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.native-powerpoint-template-link {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	color: var(--text-accent);
+	font-size: var(--font-ui-small);
+	line-height: 1;
+	padding: 7px 9px;
+	text-decoration: none;
+}
+
+.native-powerpoint-template-link:hover,
+.native-powerpoint-template-link:focus {
+	background: var(--background-modifier-hover);
+	color: var(--text-accent-hover);
+	text-decoration: none;
+}
+
+.native-powerpoint-text-input {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	color: var(--text-normal);
+	font: inherit;
+	min-height: 96px;
+	padding: 8px;
+	resize: vertical;
+	width: 100%;
+}
+
+.native-powerpoint-inspector-grid {
+	display: grid;
+	gap: 8px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	margin-top: 12px;
+}
+
+.native-powerpoint-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.native-powerpoint-field label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.native-powerpoint-field input {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 5px;
+	color: var(--text-normal);
+	font: inherit;
+	height: 30px;
+	padding: 0 7px;
+	width: 100%;
+}
+
+.native-powerpoint-inspector-button {
+	background: var(--interactive-accent);
+	border: 0;
+	border-radius: 6px;
+	color: var(--text-on-accent);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	height: 32px;
+	margin-top: 8px;
+	width: 100%;
+}
+
+.native-powerpoint-inspector-button:hover,
+.native-powerpoint-inspector-button:focus {
+	background: var(--interactive-accent-hover);
+}
+
+.native-powerpoint-chart-data {
+	border-top: 1px solid var(--background-modifier-border);
+	margin-top: 14px;
+	padding-top: 12px;
+}
+
+.native-powerpoint-chart-data-scroll {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 5px;
+	max-height: 280px;
+	overflow: auto;
+}
+
+.native-powerpoint-chart-data-grid {
+	border-collapse: collapse;
+	font-size: var(--font-ui-smaller);
+	min-width: 100%;
+}
+
+.native-powerpoint-chart-data-grid th,
+.native-powerpoint-chart-data-grid td {
+	border-bottom: 1px solid var(--background-modifier-border);
+	border-right: 1px solid var(--background-modifier-border);
+	min-width: 78px;
+	padding: 3px;
+}
+
+.native-powerpoint-chart-data-grid th {
+	background: var(--background-secondary-alt);
+	color: var(--text-muted);
+	font-weight: 600;
+	position: sticky;
+	text-align: left;
+	top: 0;
+	z-index: 1;
+}
+
+.native-powerpoint-chart-data-grid input {
+	background: var(--background-primary);
+	border: 1px solid transparent;
+	border-radius: 3px;
+	color: var(--text-normal);
+	font: inherit;
+	height: 24px;
+	min-width: 70px;
+	padding: 0 4px;
+	width: 100%;
+}
+
+.native-powerpoint-chart-data-grid input:focus {
+	border-color: var(--interactive-accent);
+	outline: none;
+}
+
+.native-powerpoint-text-input:disabled,
+.native-powerpoint-field input:disabled,
+.native-powerpoint-chart-data-grid input:disabled,
+.native-powerpoint-inspector-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.65;
+}

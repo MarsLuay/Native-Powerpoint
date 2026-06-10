@@ -1,0 +1,45 @@
+{
+	"name": "native-powerpoint-doc-editor",
+	"version": "0.0.5",
+	"description": "Native docx/pptx viewer + editor. Not reviewed by mods",
+	"main": "main.js",
+	"type": "module",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"smoke": "node scripts/smoke-docxidian-load.cjs",
+		"smoke:chart-axis": "node scripts/smoke-chart-axis-format.mjs",
+		"smoke:chart-data": "node scripts/smoke-chart-data-edit.mjs",
+		"smoke:halos": "node scripts/smoke-text-halos.mjs",
+		"smoke:fonts": "node scripts/smoke-font-fidelity.mjs",
+		"smoke:objects": "node scripts/smoke-object-clipboard.mjs",
+		"visual:caret": "node scripts/visual-inline-caret.mjs",
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"lint": "eslint \"src/**/*.{ts,tsx}\""
+	},
+	"keywords": [],
+	"license": "0-BSD",
+	"devDependencies": {
+		"@eslint/js": "9.30.1",
+		"@types/node": "^16.11.6",
+		"@types/react": "^18.3.12",
+		"@types/react-dom": "^18.3.1",
+		"esbuild": "0.25.5",
+		"eslint-plugin-obsidianmd": "0.1.9",
+		"globals": "14.0.0",
+		"jiti": "2.6.1",
+		"tslib": "2.4.0",
+		"typescript": "^5.8.3",
+		"typescript-eslint": "8.35.1"
+	},
+	"dependencies": {
+		"@eigenpal/docx-editor-i18n": "^1.0.1",
+		"@eigenpal/docx-editor-react": "^1.0.0",
+		"html2canvas": "^1.4.1",
+		"jszip": "^3.10.1",
+		"obsidian": "latest",
+		"pptx-svg": "^0.5.10",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1"
+	}
+}
