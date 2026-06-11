@@ -58,4 +58,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, local setup 
 
 ## License
 
-Released under the MiT license.
+Released under the MIT license.
