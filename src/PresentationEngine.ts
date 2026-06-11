@@ -97,6 +97,13 @@ export interface RunTarget {
   runIndex: number;
 }
 
+/** A character range inside one DrawingML paragraph. */
+export interface ParagraphTextRange {
+  paragraphIndex: number;
+  start: number;
+  end: number;
+}
+
 /**
  * Requested run-level style changes. Omitted fields are left unchanged.
  * `color`/`highlight` use uppercase `RRGGBB` hex (no `#`); `null` clears them.
@@ -2060,6 +2067,40 @@ export class PresentationEngine {
     });
   }
 
+  /**
+   * Apply run-level formatting across one or more paragraph ranges in the same
+   * shape. This keeps a multi-paragraph toolbar action in one OOXML mutation.
+   */
+  async setRunStyleForRanges(
+    slideIndex: number,
+    shapeIndex: number,
+    ranges: ParagraphTextRange[],
+    change: RunStyleChange
+  ): Promise<void> {
+    const normalizedRanges = ranges.filter((range) => (
+      Number.isFinite(range.paragraphIndex)
+      && Number.isFinite(range.start)
+      && Number.isFinite(range.end)
+    ));
+    if (normalizedRanges.length === 0) return;
+
+    await this.editSlideShape(slideIndex, shapeIndex, (shape, slideDoc) => {
+      const paragraphs = getDrawingParagraphs(shape);
+      let changed = false;
+      for (const range of normalizedRanges) {
+        const paragraph = paragraphs[range.paragraphIndex];
+        if (!paragraph) {
+          throw new Error('Could not find the selected text paragraph.');
+        }
+        changed = applyRunStyleToParagraphRange(paragraph, slideDoc, range.start, range.end, change) || changed;
+      }
+      if (change.fontSizePt !== undefined && changed) {
+        disableShrinkAutofit(shape, slideDoc);
+      }
+      return changed;
+    });
+  }
+
   /** Whether every non-empty run in `[startOffset, endOffset)` has `flag` set. */
   isRangeStyled(
     slideIndex: number,
@@ -2075,6 +2116,35 @@ export class PresentationEngine {
       const paragraph = getDrawingParagraphs(shape)[paragraphIndex];
       if (!paragraph) return false;
       return isParagraphRangeStyled(paragraph, startOffset, endOffset, flag);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Whether every non-empty run in every selected range has `flag` set. */
+  areRangesStyled(
+    slideIndex: number,
+    shapeIndex: number,
+    ranges: ParagraphTextRange[],
+    flag: 'bold' | 'italic' | 'underline'
+  ): boolean {
+    const normalizedRanges = ranges.filter((range) => (
+      Number.isFinite(range.paragraphIndex)
+      && Number.isFinite(range.start)
+      && Number.isFinite(range.end)
+      && range.start !== range.end
+    ));
+    if (normalizedRanges.length === 0) return false;
+
+    try {
+      const slideDoc = parseXml(this.renderer.getSlideOoxml(slideIndex), getSlidePath(slideIndex));
+      const shape = getShapeElement(slideDoc, shapeIndex);
+      const paragraphs = getDrawingParagraphs(shape);
+      return normalizedRanges.every((range) => {
+        const paragraph = paragraphs[range.paragraphIndex];
+        if (!paragraph) return false;
+        return isParagraphRangeStyled(paragraph, range.start, range.end, flag);
+      });
     } catch {
       return false;
     }

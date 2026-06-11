@@ -131,6 +131,35 @@ export function loadNativePowerPointViewModule() {
       registerDomEvent() {}
     }
 
+    class Menu {
+      addItem(callback) {
+        callback?.({
+          onClick() { return this; },
+          setIcon() { return this; },
+          setTitle() { return this; },
+        });
+        return this;
+      }
+
+      addSeparator() {
+        return this;
+      }
+
+      showAtMouseEvent() {}
+      showAtPosition() {}
+    }
+
+    class Modal {
+      constructor(app) {
+        this.app = app;
+        this.contentEl = createElementStub();
+        this.modalEl = createElementStub();
+      }
+
+      close() {}
+      open() {}
+    }
+
     Module._load = function load(request, parent, isMain) {
       if (request === "obsidian") {
         return {
@@ -141,7 +170,10 @@ export function loadNativePowerPointViewModule() {
             removeEventListener() {},
           },
           FileView,
+          Menu,
+          Modal,
           Notice,
+          Platform: { isDesktop: true, isMobile: false },
           normalizePath: (value) => value.replace(/\\/g, "/").replace(/\/{2,}/g, "/"),
           setIcon: () => undefined,
         };

@@ -7,6 +7,7 @@ import {
   type ImageCrop,
   type InsertableShapeGeometry,
   type ParagraphAlignment,
+  type ParagraphTextRange,
   type RunStyleChange,
   type RunStyleInfo,
   type RunTarget,
@@ -207,6 +208,11 @@ interface TextStyleContext {
   shapeIndex: number;
   run: RunTarget | null;
   anchor: { left: number; top: number; width: number; height: number };
+}
+
+interface InlineRangeSelection {
+  shapeIndex: number;
+  ranges: ParagraphTextRange[];
 }
 
 const TEXT_TOOLBAR_FONTS = [
@@ -464,6 +470,7 @@ export class NativePowerPointView extends FileView {
   private activeInlineSelectionRects: SVGRectElement[] = [];
   private inlineWholeShapeSelection: string | null = null;
   private inlineWholeShapeSelected = false;
+  private inlineRangeSelection: InlineRangeSelection | null = null;
   private inlineSelectionDrag: InlineSelectionDrag | null = null;
   private lastInlineCaretPlacement: InlineCaretPlacement | null = null;
   private suppressNextTextClick = false;
@@ -4720,6 +4727,31 @@ export class NativePowerPointView extends FileView {
     return best;
   }
 
+  private getParagraphIndexFromInlineElement(element: SVGTextElement | SVGTSpanElement): number | null {
+    const paragraph = element.closest('tspan[data-ooxml-para-idx]') ?? element;
+    const paragraphIndex = Number((paragraph as Element).getAttribute('data-ooxml-para-idx'));
+    return Number.isFinite(paragraphIndex) ? paragraphIndex : null;
+  }
+
+  private getVisualParagraphStartOffset(
+    paragraphs: (SVGTextElement | SVGTSpanElement)[],
+    targetIndex: number
+  ): number {
+    const target = paragraphs[targetIndex];
+    if (!target) return 0;
+
+    const targetParagraphIndex = this.getParagraphIndexFromInlineElement(target);
+    if (targetParagraphIndex === null) return 0;
+
+    let offset = 0;
+    for (let index = 0; index < targetIndex; index++) {
+      const paragraph = paragraphs[index];
+      if (!paragraph || this.getParagraphIndexFromInlineElement(paragraph) !== targetParagraphIndex) continue;
+      offset += this.getLeafCharInfo(paragraph).total;
+    }
+    return offset;
+  }
+
   private renderCrossParagraphSelection(
     paragraphs: (SVGTextElement | SVGTSpanElement)[],
     anchorIndex: number,
@@ -4742,6 +4774,8 @@ export class NativePowerPointView extends FileView {
     this.activeInlineCaret?.addClass('native-powerpoint-inline-caret-hidden');
 
     const textParts: string[] = [];
+    const ranges: ParagraphTextRange[] = [];
+    const shapeIndex = this.activeShapeTextTarget?.shapeIndex ?? this.selectedShapeIndex;
     for (let index = startIndex; index <= endIndex; index++) {
       const paragraph = paragraphs[index];
       if (!paragraph) continue;
@@ -4750,6 +4784,11 @@ export class NativePowerPointView extends FileView {
       const rangeEnd = index === endIndex ? Math.max(0, Math.min(total, endOffset)) : total;
       if (rangeEnd > rangeStart) {
         this.renderInlineSelectionRects(paragraph, rangeStart, rangeEnd);
+        const paragraphIndex = this.getParagraphIndexFromInlineElement(paragraph);
+        if (paragraphIndex !== null) {
+          const paragraphStart = this.getVisualParagraphStartOffset(paragraphs, index);
+          ranges.push({ paragraphIndex, start: paragraphStart + rangeStart, end: paragraphStart + rangeEnd });
+        }
       }
       const paragraphText = paragraph.textContent ?? '';
       textParts.push(paragraphText.slice(rangeStart, rangeEnd));
@@ -4759,6 +4798,10 @@ export class NativePowerPointView extends FileView {
     // but render the rects directly here rather than via the whole-shape path.
     this.inlineWholeShapeSelected = false;
     this.inlineWholeShapeSelection = textParts.join('\n');
+    this.inlineRangeSelection = shapeIndex !== null && ranges.length > 0
+      ? { shapeIndex, ranges }
+      : null;
+    this.updateTextToolbar();
   }
 
   private hasInlineSelectionDragMoved(drag: InlineSelectionDrag, clientX: number, clientY: number): boolean {
@@ -5308,7 +5351,7 @@ export class NativePowerPointView extends FileView {
     if (editor && this.activeEditor && editor !== this.activeEditor) return;
 
     this.stopInlineSelectionDrag();
-    this.inlineWholeShapeSelection = null;
+    this.clearWholeShapeInlineSelection();
     this.activeEditor?.remove();
     this.activeInlineCaret?.remove();
     this.removeInlineSelection();
@@ -5421,6 +5464,19 @@ export class NativePowerPointView extends FileView {
     };
   }
 
+  private getActiveInlineSelectionRanges(shapeIndex: number): ParagraphTextRange[] | null {
+    if (this.inlineRangeSelection?.shapeIndex === shapeIndex && this.inlineRangeSelection.ranges.length > 0) {
+      return this.inlineRangeSelection.ranges;
+    }
+
+    if (this.inlineWholeShapeSelected) {
+      const ranges = this.getShapeTextRanges(shapeIndex);
+      return ranges.length > 0 ? ranges : null;
+    }
+
+    return null;
+  }
+
   private updateTextToolbar(): void {
     const context = this.getTextStyleContext();
     if (!context) {
@@ -5476,28 +5532,37 @@ export class NativePowerPointView extends FileView {
     const style = runTarget
       ? this.engine.getRunStyle(this.currentSlide, context.shapeIndex, runTarget.paragraphIndex, runTarget.runIndex)
       : null;
-    this.currentRunStyle = style;
+    const selectedRanges = this.getActiveInlineSelectionRanges(context.shapeIndex);
+    const reflectedStyle = selectedRanges?.length && style
+      ? {
+          ...style,
+          bold: this.engine.areRangesStyled(this.currentSlide, context.shapeIndex, selectedRanges, 'bold'),
+          italic: this.engine.areRangesStyled(this.currentSlide, context.shapeIndex, selectedRanges, 'italic'),
+          underline: this.engine.areRangesStyled(this.currentSlide, context.shapeIndex, selectedRanges, 'underline')
+        }
+      : style;
+    this.currentRunStyle = reflectedStyle;
 
-    controls.bold.toggleClass('is-active', Boolean(style?.bold));
-    controls.italic.toggleClass('is-active', Boolean(style?.italic));
-    controls.underline.toggleClass('is-active', Boolean(style?.underline));
-    controls.fontLabel.setText(style?.fontFamily ?? this.getEffectiveFontFamily(context) ?? 'Font');
+    controls.bold.toggleClass('is-active', Boolean(reflectedStyle?.bold));
+    controls.italic.toggleClass('is-active', Boolean(reflectedStyle?.italic));
+    controls.underline.toggleClass('is-active', Boolean(reflectedStyle?.underline));
+    controls.fontLabel.setText(reflectedStyle?.fontFamily ?? this.getEffectiveFontFamily(context) ?? 'Font');
 
     if (activeDocument.activeElement !== controls.fontSizeInput) {
-      const sizePt = style?.fontSizePt ?? this.getEffectiveFontSizePt(context);
+      const sizePt = reflectedStyle?.fontSizePt ?? this.getEffectiveFontSizePt(context);
       controls.fontSizeInput.value = sizePt ? String(Math.round(sizePt)) : '';
     }
 
-    if (style?.color) {
-      this.textColorValue = style.color;
+    if (reflectedStyle?.color) {
+      this.textColorValue = reflectedStyle.color;
     }
-    if (style?.highlight) {
-      this.textHighlightValue = style.highlight;
+    if (reflectedStyle?.highlight) {
+      this.textHighlightValue = reflectedStyle.highlight;
     }
-    controls.textColorBar.style.setProperty('--np-swatch-color', `#${style?.color ?? this.textColorValue}`);
-    controls.highlightBar.style.setProperty('--np-swatch-color', style?.highlight ? `#${style.highlight}` : 'transparent');
+    controls.textColorBar.style.setProperty('--np-swatch-color', `#${reflectedStyle?.color ?? this.textColorValue}`);
+    controls.highlightBar.style.setProperty('--np-swatch-color', reflectedStyle?.highlight ? `#${reflectedStyle.highlight}` : 'transparent');
 
-    const alignment = style?.alignment ?? 'l';
+    const alignment = reflectedStyle?.alignment ?? 'l';
     for (const align of ['l', 'ctr', 'r', 'just'] as ParagraphAlignment[]) {
       controls.alignButtons[align].toggleClass('is-active', alignment === align);
     }
@@ -5699,6 +5764,16 @@ export class NativePowerPointView extends FileView {
   }
 
   private toggleRunFlag(flag: 'bold' | 'italic' | 'underline'): void {
+    const context = this.getTextStyleContext();
+    if (context && this.engine) {
+      const selectedRanges = this.getActiveInlineSelectionRanges(context.shapeIndex);
+      if (selectedRanges?.length) {
+        const next = !this.engine.areRangesStyled(this.currentSlide, context.shapeIndex, selectedRanges, flag);
+        this.applyRunStyle({ [flag]: next });
+        return;
+      }
+    }
+
     const editor = this.activeEditor;
     const target = this.activeTextStyleTarget;
     if (editor && target && this.engine) {
@@ -5756,15 +5831,8 @@ export class NativePowerPointView extends FileView {
     const engine = this.engine;
     if (!engine) return;
     void this.runTextFormatting('Format text', (shapeIndex, run, selection) => {
-      if (selection) {
-        return engine.setRunStyleForRange(
-          this.currentSlide,
-          shapeIndex,
-          selection.paragraphIndex,
-          selection.start,
-          selection.end,
-          change
-        );
+      if (selection?.length) {
+        return engine.setRunStyleForRanges(this.currentSlide, shapeIndex, selection, change);
       }
       return engine.setRunStyle(this.currentSlide, shapeIndex, run, change);
     });
@@ -5782,7 +5850,7 @@ export class NativePowerPointView extends FileView {
     apply: (
       shapeIndex: number,
       run: RunTarget | null,
-      selection: { paragraphIndex: number; start: number; end: number } | null
+      selection: ParagraphTextRange[] | null
     ) => Promise<void>
   ): Promise<void> {
     const engine = this.engine;
@@ -5799,23 +5867,27 @@ export class NativePowerPointView extends FileView {
     const editor = this.activeEditor;
     const styleTarget = this.activeTextStyleTarget;
     let pendingText: string | null = null;
-    let selectionRange: { paragraphIndex: number; start: number; end: number } | null = null;
+    const selectedRanges = this.getActiveInlineSelectionRanges(context.shapeIndex);
+    let selectionRanges: ParagraphTextRange[] | null = selectedRanges;
     let savedStart = 0;
     let savedEnd = 0;
     if (editor && styleTarget) {
       savedStart = Math.min(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
       savedEnd = Math.max(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
-      selectionRange = { paragraphIndex: styleTarget.paragraphIndex, start: savedStart, end: savedEnd };
+      if (!selectionRanges) {
+        selectionRanges = [{ paragraphIndex: styleTarget.paragraphIndex, start: savedStart, end: savedEnd }];
+      }
       pendingText = editor.value !== styleTarget.text ? editor.value : null;
     }
 
+    const restoreInlineRangeSelection = selectedRanges !== null;
     const scrollPosition = this.captureCanvasScroll();
     try {
       const history = await this.captureHistoryEntry(label);
-      if (pendingText !== null && selectionRange) {
-        await engine.updateParagraphText(this.currentSlide, context.shapeIndex, selectionRange.paragraphIndex, pendingText);
+      if (pendingText !== null && styleTarget) {
+        await engine.updateParagraphText(this.currentSlide, context.shapeIndex, styleTarget.paragraphIndex, pendingText);
       }
-      await apply(context.shapeIndex, context.run, selectionRange);
+      await apply(context.shapeIndex, context.run, selectionRanges);
       this.recordHistoryEntry(history);
       this.markDirty();
 
@@ -5823,11 +5895,13 @@ export class NativePowerPointView extends FileView {
       if (rendered) {
         this.restoreCanvasScrollSoon(scrollPosition);
         await this.renderThumbnails();
-        if (editor && this.activeEditor === editor && selectionRange) {
+        if (editor && this.activeEditor === editor && selectionRanges) {
           if (this.refreshActiveShapeEditorAfterRender()) {
             const length = editor.value.length;
-            this.clearWholeShapeInlineSelection();
-            editor.setSelectionRange(Math.min(savedStart, length), Math.min(savedEnd, length));
+            if (!restoreInlineRangeSelection) {
+              this.clearWholeShapeInlineSelection();
+              editor.setSelectionRange(Math.min(savedStart, length), Math.min(savedEnd, length));
+            }
             this.refreshInlineEditorGeometry();
           } else {
             this.removeActiveEditor(editor);
@@ -6176,6 +6250,11 @@ export class NativePowerPointView extends FileView {
     this.refreshActiveInlineCaretRow(element, box);
     this.updateInlineSelection(editor, element);
 
+    if (this.inlineRangeSelection) {
+      this.activeInlineCaret.addClass('native-powerpoint-inline-caret-hidden');
+      return;
+    }
+
     const selectionStart = Math.max(0, Math.min(editor.selectionStart ?? editor.value.length, editor.value.length));
     const selectionEnd = Math.max(0, Math.min(editor.selectionEnd ?? editor.value.length, editor.value.length));
     if (selectionStart !== selectionEnd) {
@@ -6203,6 +6282,11 @@ export class NativePowerPointView extends FileView {
 
     if (this.inlineWholeShapeSelected) {
       this.renderWholeShapeInlineSelection();
+      return;
+    }
+
+    if (this.inlineRangeSelection) {
+      this.renderInlineRangeSelection(this.inlineRangeSelection);
       return;
     }
 
@@ -6251,6 +6335,53 @@ export class NativePowerPointView extends FileView {
     return result;
   }
 
+  private getShapeTextRanges(shapeIndex: number): ParagraphTextRange[] {
+    const shape = this.svgEl?.querySelector(`g[data-ooxml-shape-idx="${shapeIndex}"]`);
+    if (!shape) return [];
+
+    const ranges: ParagraphTextRange[] = [];
+    const offsets = new Map<number, number>();
+    for (const paragraph of this.getShapeTextParagraphs(shape)) {
+      const paragraphIndex = this.getParagraphIndexFromInlineElement(paragraph);
+      if (paragraphIndex === null) continue;
+
+      const total = this.getLeafCharInfo(paragraph).total;
+      if (total > 0) {
+        const start = offsets.get(paragraphIndex) ?? 0;
+        const end = start + total;
+        ranges.push({ paragraphIndex, start, end });
+        offsets.set(paragraphIndex, end);
+      }
+    }
+    return ranges;
+  }
+
+  private renderInlineRangeSelection(selection: InlineRangeSelection): void {
+    const shape = this.svgEl?.querySelector(`g[data-ooxml-shape-idx="${selection.shapeIndex}"]`);
+    if (!shape) return;
+
+    const paragraphs = this.getShapeTextParagraphs(shape);
+    const offsets = new Map<number, number>();
+    for (const paragraph of paragraphs) {
+      const paragraphIndex = this.getParagraphIndexFromInlineElement(paragraph);
+      if (paragraphIndex === null) continue;
+
+      const total = this.getLeafCharInfo(paragraph).total;
+      const visualStart = offsets.get(paragraphIndex) ?? 0;
+      const visualEnd = visualStart + total;
+      offsets.set(paragraphIndex, visualEnd);
+
+      for (const range of selection.ranges) {
+        if (range.paragraphIndex !== paragraphIndex) continue;
+        const start = Math.max(0, range.start - visualStart);
+        const end = Math.min(total, range.end - visualStart);
+        if (end > start) {
+          this.renderInlineSelectionRects(paragraph, start, end);
+        }
+      }
+    }
+  }
+
   private renderWholeShapeInlineSelection(): void {
     const shape = this.getSelectedShapeElement();
     if (!shape) return;
@@ -6269,6 +6400,10 @@ export class NativePowerPointView extends FileView {
     const combined = paragraphs.map((paragraph) => paragraph.textContent ?? '').join('\n');
     this.inlineWholeShapeSelection = combined;
     this.inlineWholeShapeSelected = true;
+    const shapeIndex = this.activeShapeTextTarget?.shapeIndex ?? this.selectedShapeIndex;
+    this.inlineRangeSelection = shapeIndex !== null
+      ? { shapeIndex, ranges: this.getShapeTextRanges(shapeIndex) }
+      : null;
     this.lastInlineCaretPlacement = null;
     editor.setSelectionRange(0, editor.value.length);
     this.updateInlineCaret(editor, element);
@@ -6277,6 +6412,7 @@ export class NativePowerPointView extends FileView {
   private clearWholeShapeInlineSelection(): void {
     this.inlineWholeShapeSelection = null;
     this.inlineWholeShapeSelected = false;
+    this.inlineRangeSelection = null;
   }
 
   private removeInlineSelection(): void {

@@ -214,6 +214,35 @@ test("setRunStyleForRange bolds only the selected characters within a paragraph"
   assert.equal(engine.isRangeStyled(0, shapeIndex, paragraphIndex, 0, 5, "bold"), false);
 });
 
+test("setRunStyleForRanges applies partial formatting across paragraphs", async () => {
+  const { PresentationEngine } = await loadPresentationEngineModule();
+  const input = await readDeck("features.pptx");
+  const source = toArrayBuffer(input);
+  const sourceZip = await extractZip(source);
+  const slidePath = "ppt/slides/slide1.xml";
+  const slideXml = sourceZip.textFiles.get(slidePath);
+  assert.ok(slideXml);
+
+  const titleParagraph = '<a:p><a:r><a:rPr lang="en-US" sz="2800" b="1"/><a:t>Native PowerPoint fixture</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>';
+  const twoParagraphs =
+    '<a:p><a:r><a:rPr lang="en-US" sz="2800" b="0"/><a:t>Alpha beta</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>' +
+    '<a:p><a:r><a:rPr lang="en-US" sz="2800" b="0"/><a:t>Gamma delta</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>';
+  const patched = await buildZip(source, new Map([[slidePath, slideXml.replace(titleParagraph, twoParagraphs)]]));
+  const engine = await PresentationEngine.load(patched);
+
+  const ranges = [
+    { paragraphIndex: 0, start: 6, end: 10 },
+    { paragraphIndex: 1, start: 0, end: 5 }
+  ];
+  await engine.setRunStyleForRanges(0, 0, ranges, { bold: true });
+
+  assert.equal(engine.areRangesStyled(0, 0, ranges, "bold"), true);
+  assert.equal(engine.isRangeStyled(0, 0, 0, 0, 5, "bold"), false);
+  assert.equal(engine.isRangeStyled(0, 0, 1, 6, 11, "bold"), false);
+  assert.equal(engine.getRunStyle(0, 0, 0, 1)?.bold, true);
+  assert.equal(engine.getRunStyle(0, 0, 1, 0)?.bold, true);
+});
+
 test("updateParagraphText preserves line breaks within a paragraph", async () => {
   const { createRequire } = await import("node:module");
   const JSZip = createRequire(import.meta.url)("jszip");

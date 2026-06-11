@@ -1,6 +1,6 @@
 # Contributing to Native PowerPoint Doc Editor
 
-Thanks for helping improve Native PowerPoint Doc Editor. This plugin is maintained by Marwan Luay and is built to make DOCX and PowerPoint files usable directly inside Obsidian.
+Thanks for helping improve Native PowerPoint Doc Editor. This plugin is maintained by Mars and is built to make DOCX and PowerPoint files usable directly inside Obsidian.
 
 ## Before You Start
 
