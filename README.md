@@ -6,8 +6,6 @@ The plugin keeps Office files in place instead of converting them to Markdown. I
 
 ![Native PowerPoint Doc Editor](screenshot.png)
 
-A DOCX file open in the editor view, with the formatting toolbar and the document rendered inline in Obsidian.
-
 ## Features
 
 - Open DOCX files in a native editor view
@@ -20,10 +18,6 @@ A DOCX file open in the editor view, with the formatting toolbar and the documen
 - Detect possible save conflicts when a file changes on disk while it is open
 - Scan DOCX files for hidden or suspicious text
 - Keep DOCX and PPTX handling optional so another plugin can take over those extensions
-
-## Safety
-
-Native PowerPoint Doc Editor edits binary Office files. Keep backups of important documents, especially before making large changes to complex decks or documents. The plugin includes export validation and conflict checks, but Office file formats are broad and some advanced content may remain view-only.
 
 ## Installation
 
@@ -58,28 +52,10 @@ The `run-to-import` folder also contains local Windows and macOS installers for 
 - Use the toolbar and command palette actions for save, export, duplicate, search, and document diagnostics.
 - Use plugin settings to turn DOCX or PowerPoint handling on or off.
 
-## Desktop Support
-
-This plugin is desktop-only. It uses desktop Obsidian capabilities for Office editing, clipboard fidelity, local diagnostics, and larger binary file workflows.
-
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, local setup notes, and release expectations.
 
-```bash
-npm install
-npm run build
-npm run lint
-npm run smoke
-npm run smoke:chart-data
-npm run smoke:generated-text
-npm run smoke:halos
-npm run smoke:objects
-npm run smoke:fonts
-```
-
-PowerPoint smoke tests generate local fixture decks under `test-results/native-powerpoint-fixtures`, so they can run without checked-in sample decks. Real PPTX files can be passed with the `NATIVE_POWERPOINT_*_SAMPLE` environment variables where supported.
-
 ## License
 
-Released under the 0BSD license.
+Released under the MiT license.
