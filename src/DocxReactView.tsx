@@ -209,15 +209,15 @@ function insertPlainTypedText(view: EditorView, text: string, from = view.state.
 function readFileAsDataUrl(file: File) {
 	return new Promise<string>((resolve, reject) => {
 		const reader = new FileReader();
-		reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
-		reader.onload = () => {
+		reader.addEventListener('error', () => reject(new Error(`Could not read ${file.name}.`)), { once: true });
+		reader.addEventListener('load', () => {
 			if (typeof reader.result === 'string') {
 				resolve(reader.result);
 				return;
 			}
 
 			reject(new Error('The selected image could not be read.'));
-		};
+		}, { once: true });
 		reader.readAsDataURL(file);
 	});
 }
@@ -238,8 +238,8 @@ function scaleImageDimensions(width: number, height: number) {
 function loadImageDimensions(src: string) {
 	return new Promise<{ width: number; height: number }>((resolve, reject) => {
 		const image = new Image();
-		image.onerror = () => reject(new Error('The selected file is not a readable image.'));
-		image.onload = () => resolve(scaleImageDimensions(image.naturalWidth, image.naturalHeight));
+		image.addEventListener('error', () => reject(new Error('The selected file is not a readable image.')), { once: true });
+		image.addEventListener('load', () => resolve(scaleImageDimensions(image.naturalWidth, image.naturalHeight)), { once: true });
 		image.src = src;
 	});
 }

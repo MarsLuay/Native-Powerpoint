@@ -37,7 +37,7 @@ function getRenderedListMarkerText(marker: HTMLElement) {
 	return generatedContentText.trim().length > 0 ? generatedContentText : '';
 }
 
-interface RenderedPdfImagePage {
+export interface RenderedPdfImagePage {
 	imageBytes: Uint8Array;
 	imageWidth: number;
 	imageHeight: number;
@@ -102,7 +102,7 @@ function collectPageExportCss() {
 	return css;
 }
 
-function dataUrlToBytes(dataUrl: string) {
+export function dataUrlToBytes(dataUrl: string) {
 	const commaIndex = dataUrl.indexOf(',');
 	const base64 = commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl;
 	const binary = atob(base64);
@@ -185,8 +185,8 @@ function encodePdfTextLiteral(value: string) {
 function loadImageFromUrl(url: string) {
 	return new Promise<HTMLImageElement>((resolve, reject) => {
 		const image = new Image();
-		image.onload = () => resolve(image);
-		image.onerror = () => reject(new Error('Could not render the DOCX page for PDF export.'));
+		image.addEventListener('load', () => resolve(image), { once: true });
+		image.addEventListener('error', () => reject(new Error('Could not render the DOCX page for PDF export.')), { once: true });
 		image.src = url;
 	});
 }
@@ -699,7 +699,7 @@ function createRenderedPdfContentStream(page: RenderedPdfImagePage, imageName: s
 	return lines.join('\n');
 }
 
-function createRenderedImagePdf(pages: RenderedPdfImagePage[]) {
+export function createRenderedImagePdf(pages: RenderedPdfImagePage[]) {
 	const encoder = new TextEncoder();
 	const chunks: Uint8Array[] = [];
 	const offsets: number[] = [0];

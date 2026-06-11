@@ -181,7 +181,12 @@ function assignUniqueNonVisualIds(destinationSlide: XMLDocument, clonedShape: El
 }
 
 function generateOoxmlGuid(): string {
-  const uuid = globalThis.crypto?.randomUUID?.() ?? fallbackUuid();
+  // Prefer the popout-aware Obsidian window, then the main window. Guard with
+  // typeof so the headless test bundle (no DOM globals) falls back cleanly.
+  const cryptoApi =
+    (typeof activeWindow !== 'undefined' ? activeWindow.crypto : undefined)
+    ?? (typeof window !== 'undefined' ? window.crypto : undefined);
+  const uuid = cryptoApi?.randomUUID?.() ?? fallbackUuid();
   return `{${uuid.toUpperCase()}}`;
 }
 

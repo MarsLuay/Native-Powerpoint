@@ -1174,6 +1174,20 @@ body.theme-dark.theme-dark .docxidian-export-submenu :is(button:hover, button:fo
 	color: var(--text-error);
 }
 
+/* Dot signal: green when the document matches the last saved copy, red when not. */
+.docxidian-save-status-saved .docxidian-save-status-dot {
+	background: #22c55e;
+}
+
+.docxidian-save-status-saving .docxidian-save-status-dot {
+	background: #b06000;
+}
+
+.docxidian-save-status-unsaved .docxidian-save-status-dot,
+.docxidian-save-status-failed .docxidian-save-status-dot {
+	background: #d93025;
+}
+
 .docxidian-search-modal {
 	min-width: min(720px, 90vw);
 }
@@ -1446,24 +1460,427 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	min-height: 0;
 }
 
-.native-powerpoint-root,
-.native-powerpoint-layout {
+.native-powerpoint-root {
+	/*
+	 * Fixed Google Workspace "Slides" light palette, pinned the same way the
+	 * DOCX view pins a Google Docs palette. Locally overriding the Obsidian
+	 * theme variables keeps the PPTX editor consistently light + Google-styled
+	 * regardless of the active Obsidian theme.
+	 */
+	--background-primary: #ffffff;
+	--background-primary-alt: #f8f9fa;
+	--background-secondary: #f8f9fa;
+	--background-secondary-alt: #f1f3f4;
+	--background-modifier-border: #e3e5e8;
+	--background-modifier-border-hover: #dadce0;
+	--background-modifier-hover: #f1f3f4;
+	--background-modifier-error: #fce8e6;
+	--text-normal: #202124;
+	--text-muted: #5f6368;
+	--text-faint: #80868b;
+	--text-accent: #1a73e8;
+	--text-accent-hover: #1763cc;
+	--text-on-accent: #ffffff;
+	--text-error: #d93025;
+	--text-warning: #b06000;
+	--text-success: #188038;
+	--interactive-accent: #1a73e8;
+	--interactive-accent-hover: #1763cc;
+	--interactive-accent-rgb: 26, 115, 232;
+	--interactive-normal: #f8f9fa;
+	--interactive-hover: #f1f3f4;
+	--menu-background: #ffffff;
+	--modal-background: #ffffff;
+	--input-shadow: none;
+	/* Slides signature: medium-gray editing canvas behind the white slide. */
+	--nps-canvas: #c4c7cc;
+
+	background: var(--background-primary);
+	color: var(--text-normal);
+	color-scheme: light;
 	display: flex;
+	flex-direction: column;
 	height: 100%;
 	min-height: 0;
 	width: 100%;
 }
 
-.native-powerpoint-root {
+/*
+ * Force PPTX-owned native menus, popovers, and modals (which Obsidian appends
+ * outside .native-powerpoint-root) to the same pinned Google Slides light
+ * palette, so they don't fall back to the dark Obsidian theme. Mirrors the way
+ * the DOCX view pins its own light menu surfaces.
+ */
+body .native-powerpoint-light-surface.native-powerpoint-light-surface,
+body.theme-dark.theme-dark .native-powerpoint-light-surface.native-powerpoint-light-surface {
+	--background-primary: #ffffff;
+	--background-primary-alt: #f8f9fa;
+	--background-secondary: #f8f9fa;
+	--background-secondary-alt: #f1f3f4;
+	--background-modifier-border: #e3e5e8;
+	--background-modifier-border-hover: #dadce0;
+	--background-modifier-hover: #f1f3f4;
+	--text-normal: #202124;
+	--text-muted: #5f6368;
+	--text-faint: #80868b;
+	--text-accent: #1a73e8;
+	--text-on-accent: #ffffff;
+	--interactive-accent: #1a73e8;
+	--interactive-accent-hover: #1763cc;
+	--interactive-normal: #f8f9fa;
+	--interactive-hover: #f1f3f4;
+	--menu-background: #ffffff;
+	--modal-background: #ffffff;
+	background-color: #ffffff;
+	color: #202124;
+	color-scheme: light;
+}
+
+body .native-powerpoint-light-surface.native-powerpoint-light-surface :is(.menu-item, [role='menuitem']):is(:hover, :focus),
+body.theme-dark.theme-dark .native-powerpoint-light-surface :is(.menu-item, [role='menuitem']):is(:hover, :focus) {
+	background-color: #f1f3f4;
+	color: #202124;
+}
+
+body .native-powerpoint-light-surface.native-powerpoint-light-surface .menu-separator {
+	border-color: #e3e5e8;
+}
+
+body .native-powerpoint-light-surface.native-powerpoint-light-surface :is(
+	button,
+	.native-powerpoint-toolbar-popover button,
+	.native-powerpoint-color-popover-swatch
+) {
+	appearance: none;
+	background: transparent;
+	box-shadow: none;
+	color: #5f6368;
+}
+
+body .native-powerpoint-light-surface.native-powerpoint-light-surface :is(
+	button:hover,
+	button:focus,
+	.native-powerpoint-color-popover-swatch:hover,
+	.native-powerpoint-color-popover-swatch:focus
+) {
+	background: #f1f3f4;
+	box-shadow: none;
+	color: #202124;
+}
+
+body .native-powerpoint-light-surface.native-powerpoint-light-surface :is(input, select, textarea) {
+	appearance: none;
+	background: #ffffff;
+	box-shadow: none;
+	color: #202124;
+}
+
+/*
+ * Obsidian's dark theme applies global button/input chrome that can bleed into
+ * the pinned Google Slides palette. Re-assert light styling with high specificity.
+ */
+body.theme-dark.theme-dark .native-powerpoint-root.native-powerpoint-root {
+	--background-primary: #ffffff;
+	--background-primary-alt: #f8f9fa;
+	--background-secondary: #f8f9fa;
+	--background-secondary-alt: #f1f3f4;
+	--background-modifier-border: #e3e5e8;
+	--background-modifier-border-hover: #dadce0;
+	--background-modifier-hover: #f1f3f4;
+	--text-normal: #202124;
+	--text-muted: #5f6368;
+	--text-faint: #80868b;
+	--interactive-accent: #1a73e8;
+	--interactive-accent-hover: #1763cc;
+	--interactive-normal: #f8f9fa;
+	--interactive-hover: #f1f3f4;
+	--menu-background: #ffffff;
+	--modal-background: #ffffff;
+	background: #ffffff;
+	color: #202124;
+	color-scheme: light;
+}
+
+body.theme-dark.theme-dark .native-powerpoint-root :is(
+	.native-powerpoint-toolbar-btn,
+	.native-powerpoint-menubar-item,
+	.native-powerpoint-menubar-dropdown-item,
+	.native-powerpoint-find-btn,
+	.native-powerpoint-find-replace-btn,
+	.native-powerpoint-find-replace-toggle,
+	.native-powerpoint-text-toolbar-btn,
+	.native-powerpoint-text-toolbar-font,
+	.native-powerpoint-insert-menu-item,
+	.native-powerpoint-image-picker-item,
+	.native-powerpoint-color-popover-swatch
+) {
+	appearance: none;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+}
+
+body.theme-dark.theme-dark .native-powerpoint-root :is(
+	.native-powerpoint-toolbar-btn:hover,
+	.native-powerpoint-toolbar-btn:focus,
+	.native-powerpoint-menubar-item:hover,
+	.native-powerpoint-menubar-item:focus,
+	.native-powerpoint-menubar-item.is-active,
+	.native-powerpoint-menubar-dropdown-item:hover,
+	.native-powerpoint-menubar-dropdown-item:focus,
+	.native-powerpoint-find-btn:hover,
+	.native-powerpoint-find-btn:focus,
+	.native-powerpoint-find-replace-btn:hover,
+	.native-powerpoint-find-replace-btn:focus,
+	.native-powerpoint-find-replace-toggle:hover,
+	.native-powerpoint-find-replace-toggle:focus,
+	.native-powerpoint-text-toolbar-btn:hover,
+	.native-powerpoint-text-toolbar-btn:focus,
+	.native-powerpoint-text-toolbar-font:hover,
+	.native-powerpoint-text-toolbar-font:focus,
+	.native-powerpoint-insert-menu-item:hover,
+	.native-powerpoint-insert-menu-item:focus,
+	.native-powerpoint-image-picker-item:hover,
+	.native-powerpoint-image-picker-item:focus
+) {
+	background: var(--background-modifier-hover);
+	box-shadow: none;
+	color: var(--text-normal);
+}
+
+body.theme-dark.theme-dark .native-powerpoint-root :is(
+	.native-powerpoint-find-input,
+	.native-powerpoint-text-toolbar-size,
+	.native-powerpoint-header-name-input,
+	.native-powerpoint-inspector-grid input,
+	.native-powerpoint-inspector-grid select,
+	.native-powerpoint-color-popover-custom input
+) {
+	appearance: none;
 	background: var(--background-primary);
+	box-shadow: none;
+	color: var(--text-normal);
+}
+
+body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-text-toolbar-btn.is-active,
+body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-text-toolbar-btn[aria-pressed='true'] {
+	background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+	color: var(--text-normal);
+}
+
+.native-powerpoint-layout {
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+}
+
+.native-powerpoint-headerbar {
+	align-items: center;
+	background: var(--background-primary);
+	display: flex;
+	flex: 0 0 auto;
+	gap: 6px;
+	padding: 4px 10px 0;
+}
+
+.native-powerpoint-headerbar-main {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.native-powerpoint-header {
+	align-items: center;
+	background: var(--background-primary);
+	display: flex;
+	flex: 0 0 auto;
+	gap: 10px;
+	justify-content: space-between;
+	padding: 3px 4px 0;
+}
+
+.native-powerpoint-header-title {
+	align-items: center;
+	color: var(--text-normal);
+	display: flex;
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
+	gap: 8px;
+	min-width: 0;
+}
+
+.native-powerpoint-header-save {
+	align-items: center;
+	background: transparent;
+	border: none;
+	border-radius: 8px;
+	box-shadow: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	display: inline-flex;
+	flex: 0 0 auto;
+	height: 40px;
+	justify-content: center;
+	padding: 0;
+	width: 40px;
+}
+
+.native-powerpoint-header-save:hover,
+.native-powerpoint-header-save:focus {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+	outline: none;
+}
+
+.native-powerpoint-header-save svg {
+	height: 22px;
+	width: 22px;
+}
+
+.native-powerpoint-header-name {
+	border: 1px solid transparent;
+	border-radius: 4px;
+	cursor: text;
+	margin: -2px -6px;
+	overflow: hidden;
+	padding: 2px 6px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.native-powerpoint-header-name:hover,
+.native-powerpoint-header-name:focus {
+	background: var(--background-modifier-hover);
+	border-color: var(--background-modifier-border);
+	outline: none;
+}
+
+.native-powerpoint-header-name-input {
+	background: var(--background-primary);
+	border: 1px solid var(--interactive-accent);
+	border-radius: 4px;
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	font-weight: 600;
+	margin: -2px -6px;
+	min-width: 0;
+	padding: 2px 6px;
+}
+
+.native-powerpoint-header-name-input:focus {
+	outline: none;
+}
+
+.native-powerpoint-menubar {
+	align-items: center;
+	background: var(--background-primary);
+	display: flex;
+	flex: 0 0 auto;
+	gap: 2px;
+	padding: 2px 10px;
+}
+
+.native-powerpoint-menubar-item {
+	background: transparent;
+	border: 0;
+	border-radius: 4px;
+	color: var(--text-normal);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--font-ui-small);
+	line-height: 1.4;
+	padding: 3px 9px;
+}
+
+.native-powerpoint-menubar-item:hover,
+.native-powerpoint-menubar-item:focus,
+.native-powerpoint-menubar-item.is-active {
+	background: var(--background-modifier-hover);
+	outline: none;
+}
+
+.native-powerpoint-menubar-dropdown {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(60, 64, 67, 0.18);
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 220px;
+	padding: 6px;
+	position: fixed;
+	z-index: 100020;
+}
+
+.native-powerpoint-menubar-dropdown-item {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: var(--text-normal);
+	cursor: pointer;
+	display: flex;
+	font: inherit;
+	font-size: var(--font-ui-small);
+	gap: 10px;
+	padding: 7px 10px;
+	text-align: left;
+	width: 100%;
+}
+
+.native-powerpoint-menubar-dropdown-item:hover,
+.native-powerpoint-menubar-dropdown-item:focus {
+	background: var(--background-modifier-hover);
+	outline: none;
+}
+
+.native-powerpoint-menubar-dropdown-item:disabled {
+	color: var(--text-faint);
+	cursor: default;
+}
+
+.native-powerpoint-menubar-dropdown-icon {
+	align-items: center;
+	color: var(--text-muted);
+	display: inline-flex;
+	flex: 0 0 auto;
+}
+
+.native-powerpoint-menubar-dropdown-icon svg {
+	height: 16px;
+	width: 16px;
+}
+
+.native-powerpoint-menubar-dropdown-label {
+	flex: 1 1 auto;
+}
+
+.native-powerpoint-menubar-dropdown-sep {
+	border-top: 1px solid var(--background-modifier-border);
+	margin: 4px 0;
+}
+
+.native-powerpoint-print-frame {
+	position: fixed;
+	left: -10000px;
+	top: 0;
+	width: 1px;
+	height: 1px;
+	border: 0;
+	opacity: 0;
+	pointer-events: none;
 }
 
 .native-powerpoint-sidebar {
 	background: var(--background-secondary);
-	border-right: 1px solid var(--background-modifier-border);
+	border-radius: 16px;
 	display: flex;
 	flex: 0 0 152px;
 	flex-direction: column;
+	margin: 2px 8px 8px 10px;
 	min-width: 152px;
 	overflow: hidden;
 }
@@ -1480,10 +1897,30 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	padding: 0 10px;
 }
 
-.native-powerpoint-sidebar-hint {
+.native-powerpoint-sidebar-add {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 5px;
 	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-	font-weight: 500;
+	cursor: pointer;
+	display: inline-flex;
+	height: 24px;
+	justify-content: center;
+	padding: 0;
+	width: 24px;
+}
+
+.native-powerpoint-sidebar-add:hover,
+.native-powerpoint-sidebar-add:focus {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+	outline: none;
+}
+
+.native-powerpoint-sidebar-add svg {
+	height: 16px;
+	width: 16px;
 }
 
 .native-powerpoint-thumbnails {
@@ -1509,6 +1946,62 @@ body.theme-dark .docxidian-hidden-text-snippet {
 
 .native-powerpoint-thumbnail.active {
 	border-color: var(--interactive-accent);
+}
+
+.native-powerpoint-thumbnail.is-selected {
+	background: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+	border-color: var(--interactive-accent);
+}
+
+.native-powerpoint-thumbnail.is-dragging {
+	opacity: 0.5;
+}
+
+.native-powerpoint-thumbnail.drop-before::before,
+.native-powerpoint-thumbnail.drop-after::after {
+	background: var(--interactive-accent);
+	border-radius: 2px;
+	content: '';
+	height: 3px;
+	left: 4px;
+	position: absolute;
+	right: 4px;
+}
+
+.native-powerpoint-thumbnail.drop-before::before {
+	top: -3px;
+}
+
+.native-powerpoint-thumbnail.drop-after::after {
+	bottom: -3px;
+}
+
+.native-powerpoint-slide-background {
+	border-top: 1px solid var(--background-modifier-border);
+	margin-top: 12px;
+	padding-top: 12px;
+}
+
+.native-powerpoint-background-row {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.native-powerpoint-background-color {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+	height: 32px;
+	padding: 2px;
+	width: 48px;
+}
+
+.native-powerpoint-background-color:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
 }
 
 .native-powerpoint-thumbnail-preview {
@@ -1555,17 +2048,35 @@ body.theme-dark .docxidian-hidden-text-snippet {
 
 .native-powerpoint-toolbar {
 	align-items: center;
-	align-content: center;
 	background: var(--background-secondary);
-	border-bottom: 1px solid var(--background-modifier-border);
+	border-radius: 20px;
 	display: flex;
 	flex: 0 0 auto;
-	flex-wrap: wrap;
-	gap: 10px;
-	min-height: 38px;
-	overflow-x: hidden;
-	padding: 4px 10px;
-	row-gap: 4px;
+	flex-wrap: nowrap;
+	gap: 8px;
+	margin: 2px 12px 8px;
+	min-height: 40px;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 4px 12px;
+	scrollbar-width: thin;
+}
+
+.native-powerpoint-toolbar::-webkit-scrollbar {
+	height: 6px;
+}
+
+.native-powerpoint-toolbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.native-powerpoint-toolbar::-webkit-scrollbar-thumb {
+	background: var(--background-modifier-border);
+	border-radius: 4px;
+}
+
+.native-powerpoint-toolbar:hover::-webkit-scrollbar-thumb {
+	background: var(--background-modifier-border-hover);
 }
 
 .native-powerpoint-toolbar-group {
@@ -1573,6 +2084,93 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	display: flex;
 	flex: 0 0 auto;
 	gap: 3px;
+}
+
+.native-powerpoint-toolbar-group + .native-powerpoint-toolbar-group {
+	border-left: 1px solid var(--background-modifier-border);
+	padding-left: 8px;
+}
+
+.native-powerpoint-toolbar-group-end {
+	margin-left: auto;
+}
+
+.native-powerpoint-zoom-level {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	min-width: 46px;
+	text-align: center;
+}
+
+.native-powerpoint-image-file-input {
+	display: none;
+}
+
+.native-powerpoint-insert-menu {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(60, 64, 67, 0.18);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 180px;
+	padding: 4px;
+	position: fixed;
+	z-index: 100020;
+}
+
+.native-powerpoint-insert-menu-item {
+	background: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: var(--text-normal);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--font-ui-small);
+	padding: 8px 10px;
+	text-align: left;
+}
+
+.native-powerpoint-insert-menu-item:hover,
+.native-powerpoint-insert-menu-item:focus {
+	background: var(--background-modifier-hover);
+}
+
+.native-powerpoint-image-picker-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-height: 360px;
+	overflow: auto;
+}
+
+.native-powerpoint-image-picker-item {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	color: var(--text-normal);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--font-ui-small);
+	padding: 8px 10px;
+	text-align: left;
+}
+
+.native-powerpoint-image-picker-item:hover,
+.native-powerpoint-image-picker-item:focus {
+	background: var(--background-modifier-hover);
+}
+
+.native-powerpoint-insert-table-form {
+	display: grid;
+	gap: 12px;
+}
+
+.native-powerpoint-insert-table-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
 }
 
 .native-powerpoint-toolbar-btn {
@@ -1610,21 +2208,77 @@ body.theme-dark .docxidian-hidden-text-snippet {
 }
 
 .native-powerpoint-find-panel {
-	align-items: center;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
 	display: none;
 	flex: 1 1 260px;
+	flex-direction: column;
 	gap: 4px;
 	max-width: 420px;
-	min-height: 30px;
 	min-width: min(100%, 220px);
 	padding: 2px 4px;
 }
 
+.native-powerpoint-find-panel-floating {
+	position: fixed;
+	z-index: 100050;
+	width: 340px;
+	max-width: calc(100vw - 16px);
+	min-width: 0;
+	flex: 0 0 auto;
+	padding: 8px;
+	gap: 6px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
 .native-powerpoint-find-panel.is-open {
-	display: inline-flex;
+	display: flex;
+}
+
+.native-powerpoint-find-row {
+	align-items: center;
+	display: flex;
+	gap: 4px;
+	min-height: 26px;
+	width: 100%;
+}
+
+.native-powerpoint-find-replace-row {
+	align-items: center;
+	border-top: 1px solid var(--background-modifier-border);
+	display: none;
+	gap: 4px;
+	min-height: 26px;
+	padding-top: 4px;
+	width: 100%;
+}
+
+.native-powerpoint-find-panel.is-replace-mode .native-powerpoint-find-replace-row {
+	display: flex;
+}
+
+.native-powerpoint-find-replace-toggle {
+	flex: 0 0 auto;
+}
+
+.native-powerpoint-find-replace-btn {
+	background: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--text-muted);
+	cursor: pointer;
+	flex: 0 0 auto;
+	font-size: var(--font-ui-smaller);
+	height: 24px;
+	padding: 0 8px;
+	white-space: nowrap;
+}
+
+.native-powerpoint-find-replace-btn:hover,
+.native-powerpoint-find-replace-btn:focus {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
 }
 
 .native-powerpoint-find-input {
@@ -1672,22 +2326,39 @@ body.theme-dark .docxidian-hidden-text-snippet {
 }
 
 .native-powerpoint-save-status {
+	align-items: center;
 	color: var(--text-muted);
-	font-size: var(--font-ui-small);
+	display: inline-flex;
+	flex: 0 0 auto;
+	font-size: var(--font-ui-smaller);
+	font-weight: 500;
+	gap: 6px;
+	justify-content: center;
+	line-height: 1;
 	margin-left: auto;
+	min-width: 72px;
 	white-space: nowrap;
 }
 
-.native-powerpoint-save-status[data-state='dirty'] {
-	color: var(--text-accent);
+.native-powerpoint-save-status::before {
+	background: currentColor;
+	border-radius: 50%;
+	content: '';
+	flex: 0 0 auto;
+	height: 6px;
+	width: 6px;
 }
 
-.native-powerpoint-save-status[data-state='saving'] {
+.native-powerpoint-save-status[data-state='dirty'] {
 	color: var(--text-warning);
 }
 
+.native-powerpoint-save-status[data-state='saving'] {
+	color: var(--text-accent);
+}
+
 .native-powerpoint-save-status[data-state='saved'] {
-	color: var(--text-success);
+	color: var(--text-muted);
 }
 
 .native-powerpoint-save-status[data-state='failed'] {
@@ -1702,21 +2373,41 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	color: var(--text-muted);
 }
 
+/* Dot signal: green when the presentation matches the last saved copy, red when not. */
+.native-powerpoint-save-status[data-state='saved']::before {
+	background: #22c55e;
+}
+
+.native-powerpoint-save-status[data-state='saving']::before {
+	background: #b06000;
+}
+
+.native-powerpoint-save-status[data-state='dirty']::before,
+.native-powerpoint-save-status[data-state='recovered']::before,
+.native-powerpoint-save-status[data-state='failed']::before {
+	background: #d93025;
+}
+
+.native-powerpoint-save-status[data-state='idle']::before,
+.native-powerpoint-save-status[data-state='view-only']::before {
+	background: var(--text-faint);
+}
+
 .native-powerpoint-canvas-pane {
 	align-items: center;
-	background: var(--background-primary);
+	background: var(--nps-canvas);
 	display: flex;
 	flex: 1 1 auto;
 	justify-content: center;
 	min-height: 0;
 	overflow: auto;
-	padding: 28px;
+	padding: 32px;
 	position: relative;
 }
 
 .native-powerpoint-slide-surface {
 	background: white;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+	box-shadow: 0 1px 4px rgba(60, 64, 67, 0.3), 0 4px 14px rgba(60, 64, 67, 0.22);
 	color: black;
 	flex: 0 0 auto;
 	min-height: 320px;
@@ -1762,10 +2453,6 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	cursor: text;
 }
 
-.native-powerpoint-slide-svg .native-powerpoint-editable-text:hover {
-	filter: drop-shadow(0 0 1px var(--interactive-accent));
-}
-
 .native-powerpoint-slide-svg .native-powerpoint-generated-readonly {
 	cursor: help;
 }
@@ -1787,10 +2474,13 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	filter: drop-shadow(0 0 2px var(--interactive-accent));
 }
 
-.native-powerpoint-slide-svg .native-powerpoint-find-current {
-	filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.95));
-	outline: 2px solid rgba(245, 158, 11, 0.95);
-	outline-offset: 2px;
+.native-powerpoint-slide-svg .native-powerpoint-find-highlight {
+	fill: rgba(250, 204, 21, 0.45);
+	pointer-events: none;
+}
+
+.native-powerpoint-slide-svg .native-powerpoint-find-highlight.is-current {
+	fill: rgba(245, 158, 11, 0.6);
 }
 
 .native-powerpoint-inline-caret-hidden {
@@ -1803,6 +2493,20 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	pointer-events: none;
 	position: absolute;
 	z-index: 5;
+}
+
+.native-powerpoint-multi-selection-box {
+	border-style: dashed;
+	border-width: 1.5px;
+}
+
+.native-powerpoint-marquee-box {
+	background: rgba(var(--interactive-accent-rgb, 80, 130, 230), 0.16);
+	border: 1px solid var(--interactive-accent);
+	box-sizing: border-box;
+	pointer-events: none;
+	position: absolute;
+	z-index: 6;
 }
 
 .native-powerpoint-resize-handle {
@@ -1838,6 +2542,51 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	bottom: -6px;
 	cursor: nwse-resize;
 	right: -6px;
+}
+
+.native-powerpoint-rotate-stem {
+	background: var(--interactive-accent);
+	height: 18px;
+	left: 50%;
+	pointer-events: none;
+	position: absolute;
+	top: -18px;
+	transform: translateX(-50%);
+	width: 1px;
+}
+
+.native-powerpoint-rotate-handle {
+	background: var(--background-primary);
+	border: 2px solid var(--interactive-accent);
+	border-radius: 50%;
+	box-sizing: border-box;
+	cursor: grab;
+	height: 12px;
+	left: 50%;
+	pointer-events: auto;
+	position: absolute;
+	top: -30px;
+	transform: translateX(-50%);
+	width: 12px;
+}
+
+.native-powerpoint-rotate-handle:active {
+	cursor: grabbing;
+}
+
+.native-powerpoint-snap-guide {
+	background: #ea4335;
+	pointer-events: none;
+	position: absolute;
+	z-index: 7;
+}
+
+.native-powerpoint-snap-guide-vertical {
+	width: 1px;
+}
+
+.native-powerpoint-snap-guide-horizontal {
+	height: 1px;
 }
 
 .native-powerpoint-inline-editor {
@@ -1877,6 +2626,187 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	background: transparent;
 }
 
+.native-powerpoint-text-toolbar {
+	align-items: center;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 6px 20px rgba(60, 64, 67, 0.22);
+	display: none;
+	gap: 4px;
+	padding: 4px 6px;
+	position: absolute;
+	z-index: 20;
+}
+
+.native-powerpoint-text-toolbar.is-visible {
+	display: flex;
+}
+
+.native-powerpoint-text-toolbar-group {
+	align-items: center;
+	display: flex;
+	flex: 0 0 auto;
+	gap: 2px;
+}
+
+.native-powerpoint-text-toolbar-group + .native-powerpoint-text-toolbar-group {
+	border-left: 1px solid var(--background-modifier-border);
+	margin-left: 2px;
+	padding-left: 6px;
+}
+
+.native-powerpoint-text-toolbar-btn.is-active {
+	background: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+	color: var(--interactive-accent);
+}
+
+.native-powerpoint-text-toolbar-font {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 5px;
+	color: var(--text-normal);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-size: var(--font-ui-small);
+	gap: 4px;
+	height: 28px;
+	max-width: 140px;
+	padding: 0 6px;
+}
+
+.native-powerpoint-text-toolbar-font:hover,
+.native-powerpoint-text-toolbar-font:focus {
+	background: var(--background-modifier-hover);
+}
+
+.native-powerpoint-text-toolbar-font-label {
+	max-width: 110px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.native-powerpoint-text-toolbar-caret {
+	display: inline-flex;
+	opacity: 0.7;
+}
+
+.native-powerpoint-text-toolbar-size {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 5px;
+	background: var(--background-primary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	height: 26px;
+	text-align: center;
+	width: 48px;
+}
+
+.native-powerpoint-text-toolbar-swatch {
+	flex-direction: column;
+	gap: 1px;
+}
+
+.native-powerpoint-text-toolbar-swatch-icon {
+	display: inline-flex;
+	line-height: 0;
+}
+
+.native-powerpoint-text-toolbar-swatch-bar {
+	background-color: var(--np-swatch-color, transparent);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 1px;
+	height: 4px;
+	width: 16px;
+}
+
+.native-powerpoint-toolbar-popover {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(60, 64, 67, 0.22);
+	padding: 8px;
+	position: fixed;
+	z-index: 100025;
+}
+
+.native-powerpoint-color-popover-grid {
+	display: grid;
+	gap: 4px;
+	grid-template-columns: repeat(8, 18px);
+}
+
+.native-powerpoint-color-popover-swatch {
+	background-color: var(--np-swatch-color, transparent);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 3px;
+	cursor: pointer;
+	height: 18px;
+	padding: 0;
+	width: 18px;
+}
+
+.native-powerpoint-color-popover-swatch.is-active {
+	box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.native-powerpoint-color-popover-none {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	color: var(--text-normal);
+	cursor: pointer;
+	font: inherit;
+	font-size: var(--font-ui-small);
+	margin-bottom: 8px;
+	padding: 6px 10px;
+	width: 100%;
+}
+
+.native-powerpoint-color-popover-none:hover {
+	background: var(--background-modifier-hover);
+}
+
+.native-powerpoint-color-popover-custom {
+	align-items: center;
+	color: var(--text-muted);
+	display: flex;
+	font-size: var(--font-ui-small);
+	gap: 8px;
+	justify-content: space-between;
+	margin-top: 8px;
+}
+
+.native-powerpoint-font-menu {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 320px;
+	min-width: 180px;
+	overflow-y: auto;
+	padding: 4px;
+}
+
+.native-powerpoint-font-menu-item {
+	background: transparent;
+	border: 0;
+	border-radius: 6px;
+	color: var(--text-normal);
+	cursor: pointer;
+	font-family: var(--np-font-family, inherit);
+	font-size: var(--font-ui-medium);
+	padding: 6px 10px;
+	text-align: left;
+}
+
+.native-powerpoint-font-menu-item:hover,
+.native-powerpoint-font-menu-item.is-active {
+	background: var(--background-modifier-hover);
+}
+
 .native-powerpoint-svg-caret {
 	animation: native-powerpoint-caret-blink 1s steps(1, end) infinite;
 	pointer-events: none;
@@ -1908,6 +2838,10 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	min-width: 240px;
 	overflow-y: auto;
 	padding: 12px;
+}
+
+.native-powerpoint-inspector-hidden {
+	display: none;
 }
 
 .native-powerpoint-inspector-title {
@@ -2085,6 +3019,25 @@ body.theme-dark .docxidian-hidden-text-snippet {
 	text-decoration: none;
 }
 
+.native-powerpoint-report-bug {
+	display: flex;
+	justify-content: center;
+	margin-top: 24px;
+	padding-top: 16px;
+}
+
+.native-powerpoint-report-bug-link {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	text-decoration: none;
+}
+
+.native-powerpoint-report-bug-link:hover,
+.native-powerpoint-report-bug-link:focus {
+	color: var(--text-accent);
+	text-decoration: underline;
+}
+
 .native-powerpoint-text-input {
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
@@ -2205,4 +3158,79 @@ body.theme-dark .docxidian-hidden-text-snippet {
 .native-powerpoint-inspector-button:disabled {
 	cursor: not-allowed;
 	opacity: 0.65;
+}
+
+.native-powerpoint-present-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: var(--layer-modal, 100);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #000000;
+	cursor: pointer;
+	outline: none;
+}
+
+.native-powerpoint-present-stage {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+}
+
+.native-powerpoint-present-slide {
+	max-width: 100%;
+	max-height: 100%;
+	width: auto;
+	height: auto;
+	object-fit: contain;
+	box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+}
+
+.native-powerpoint-present-error {
+	color: #ffffff;
+	font-size: 18px;
+	text-align: center;
+	max-width: 60%;
+}
+
+.native-powerpoint-present-hud {
+	position: fixed;
+	top: 16px;
+	right: 16px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	opacity: 0.35;
+	transition: opacity 120ms ease;
+}
+
+.native-powerpoint-present-overlay:hover .native-powerpoint-present-hud {
+	opacity: 1;
+}
+
+.native-powerpoint-present-counter {
+	color: #ffffff;
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+	background: rgba(0, 0, 0, 0.5);
+	border-radius: 6px;
+	padding: 4px 10px;
+}
+
+.native-powerpoint-present-exit {
+	color: #ffffff;
+	background: rgba(255, 255, 255, 0.15);
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	border-radius: 6px;
+	padding: 4px 12px;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+.native-powerpoint-present-exit:hover {
+	background: rgba(255, 255, 255, 0.28);
 }

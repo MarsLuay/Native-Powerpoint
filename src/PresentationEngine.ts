@@ -26,6 +26,26 @@ import {
   pasteSlideObject,
   type SlideObjectClipboard
 } from './ShapeClipboard';
+import {
+  applyParagraphListStyle,
+  insertChartIntoPresentation,
+  insertTableIntoPresentation,
+  mergeMissingPackageParts,
+  mergeSlideGraphicFramesFromBuffer,
+  type ParagraphListStyle
+} from './SlideInsertions';
+
+export type InsertableShapeGeometry =
+  | 'rect'
+  | 'ellipse'
+  | 'roundRect'
+  | 'line'
+  | 'rightArrow'
+  | 'leftArrow'
+  | 'upArrow'
+  | 'downArrow';
+
+export type SlideLayoutKind = 'blank' | 'title' | 'titleBody';
 
 function assertOk(result: string, fallback: string): void {
   if (result.startsWith('ERROR:')) {
@@ -40,7 +60,25 @@ const SLIDE_CONTENT_TYPE =
 const DRAWINGML_NAMESPACE = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 const RELATIONSHIP_NAMESPACE =
   'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+const PACKAGE_RELATIONSHIP_NAMESPACE =
+  'http://schemas.openxmlformats.org/package/2006/relationships';
+const IMAGE_RELATIONSHIP_TYPE =
+  'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
 const SHAPE_ELEMENT_NAMES = new Set(['cxnSp', 'graphicFrame', 'grpSp', 'pic', 'sp']);
+
+/** Inset crop, expressed as a percentage (0-100) of the source image edge. */
+export interface ImageCrop {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/** Raw image bytes resolved from an embedded picture, with its MIME type. */
+export interface ShapeImageData {
+  bytes: Uint8Array;
+  mimeType: string;
+}
 
 export type GeneratedTextKind = 'chart' | 'table';
 
@@ -49,6 +87,40 @@ export interface GeneratedTextEdit {
   labelIndex: number;
   occurrence: number;
   previousText: string;
+}
+
+export type ParagraphAlignment = 'l' | 'ctr' | 'r' | 'just';
+
+/** A specific text run inside a shape, identified by paragraph and run index. */
+export interface RunTarget {
+  paragraphIndex: number;
+  runIndex: number;
+}
+
+/**
+ * Requested run-level style changes. Omitted fields are left unchanged.
+ * `color`/`highlight` use uppercase `RRGGBB` hex (no `#`); `null` clears them.
+ */
+export interface RunStyleChange {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  fontFamily?: string;
+  fontSizePt?: number;
+  color?: string | null;
+  highlight?: string | null;
+}
+
+/** Resolved run-level style read back from a slide, for reflecting toolbar state. */
+export interface RunStyleInfo {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  fontFamily: string | null;
+  fontSizePt: number | null;
+  color: string | null;
+  highlight: string | null;
+  alignment: ParagraphAlignment | null;
 }
 
 type ChartAxisOrientation = 'horizontal' | 'vertical';
@@ -102,6 +174,62 @@ function getShapeElement(slideDoc: XMLDocument, shapeIndex: number): Element {
   return shape;
 }
 
+interface ShapeBox {
+  x: number;
+  y: number;
+  cx: number;
+  cy: number;
+}
+
+export type ShapeReorderMode = 'front' | 'back' | 'forward' | 'backward';
+
+function intAttr(value: string | null): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getSpTreeShapes(shapeTree: Element): Element[] {
+  return getElementChildren(shapeTree).filter((element) => SHAPE_ELEMENT_NAMES.has(element.localName));
+}
+
+function getShapeBox(shape: Element): ShapeBox | null {
+  const offset = getDescendants(shape, 'off')[0];
+  const extent = getDescendants(shape, 'ext')[0];
+  if (!offset || !extent) return null;
+  return {
+    x: intAttr(offset.getAttribute('x')),
+    y: intAttr(offset.getAttribute('y')),
+    cx: intAttr(extent.getAttribute('cx')),
+    cy: intAttr(extent.getAttribute('cy'))
+  };
+}
+
+function nextShapeId(slideDoc: XMLDocument): number {
+  let maxId = 1;
+  for (const cNvPr of getDescendants(slideDoc, 'cNvPr')) {
+    const id = Number(cNvPr.getAttribute('id'));
+    if (Number.isFinite(id) && id > maxId) maxId = id;
+  }
+  return maxId + 1;
+}
+
+function qualifyName(reference: Element, localName: string): string {
+  return reference.prefix ? `${reference.prefix}:${localName}` : localName;
+}
+
+function adjacentUnselectedShape(
+  element: Element,
+  selected: Set<Element>,
+  direction: 1 | -1
+): Element | null {
+  let current = direction === 1 ? element.nextElementSibling : element.previousElementSibling;
+  while (current) {
+    if (SHAPE_ELEMENT_NAMES.has(current.localName) && !selected.has(current)) return current;
+    current = direction === 1 ? current.nextElementSibling : current.previousElementSibling;
+  }
+  return null;
+}
+
 function setDrawingText(container: Element, text: string): void {
   const textElements = getDescendants(container, 't')
     .filter((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
@@ -122,6 +250,30 @@ function getDrawingParagraphs(container: Element): Element[] {
   const scope = textBody ?? container;
   return getElementChildren(scope)
     .filter((element) => element.localName === 'p' && element.namespaceURI === DRAWINGML_NAMESPACE);
+}
+
+function setDrawingParagraphText(container: Element, paragraphIndex: number, text: string): void {
+  const paragraphs = getDrawingParagraphs(container);
+  const paragraph = paragraphs[paragraphIndex];
+  if (!paragraph) {
+    throw new Error('Could not find the selected text paragraph.');
+  }
+
+  const runs = getElementChildren(paragraph)
+    .filter((element) => element.localName === 'r' && element.namespaceURI === DRAWINGML_NAMESPACE);
+  if (runs.length === 0) {
+    throw new Error('Could not find the selected text paragraph runs.');
+  }
+
+  runs.forEach((run, runIndex) => {
+    const textElement = getElementChildren(run)
+      .find((element) => element.localName === 't' && element.namespaceURI === DRAWINGML_NAMESPACE)
+      ?? getDescendants(run, 't').find((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
+    if (!textElement) {
+      throw new Error('Could not find the selected text node.');
+    }
+    textElement.textContent = runIndex === 0 ? text : '';
+  });
 }
 
 function setDrawingTextRun(container: Element, paragraphIndex: number, runIndex: number, text: string): void {
@@ -148,6 +300,203 @@ function setDrawingTextRun(container: Element, paragraphIndex: number, runIndex:
   textElement.textContent = text;
 }
 
+/**
+ * Replace every occurrence of `query` with `replacement` inside a single text
+ * string and report how many substitutions were made. Operates on plain run
+ * text, so matches that span multiple runs are not handled here.
+ */
+function replaceTextOccurrences(
+  source: string,
+  query: string,
+  replacement: string,
+  matchCase: boolean
+): { result: string; count: number } {
+  if (!query) {
+    return { result: source, count: 0 };
+  }
+
+  const haystack = matchCase ? source : source.toLocaleLowerCase();
+  const needle = matchCase ? query : query.toLocaleLowerCase();
+  let result = '';
+  let count = 0;
+  let index = 0;
+
+  while (index <= source.length) {
+    const found = haystack.indexOf(needle, index);
+    if (found === -1) {
+      result += source.slice(index);
+      break;
+    }
+    result += source.slice(index, found) + replacement;
+    index = found + needle.length;
+    count += 1;
+  }
+
+  return { result, count };
+}
+
+interface DrawingRunPosition {
+  paragraphIndex: number;
+  runIndex: number;
+  run: Element;
+}
+
+// Canonical child order of CT_TextCharacterProperties (a:rPr). New children must be
+// inserted at the right position or PowerPoint rejects the slide on save.
+const RUN_PROPERTY_CHILD_ORDER = [
+  'ln',
+  'noFill',
+  'solidFill',
+  'gradFill',
+  'blipFill',
+  'pattFill',
+  'grpFill',
+  'effectLst',
+  'effectDag',
+  'highlight',
+  'uLnTx',
+  'uLn',
+  'uFillTx',
+  'uFill',
+  'latin',
+  'ea',
+  'cs',
+  'sym',
+  'hlinkClick',
+  'hlinkMouseOver',
+  'rtl',
+  'extLst'
+];
+
+function getDrawingRuns(paragraph: Element): Element[] {
+  return getElementChildren(paragraph)
+    .filter((element) => element.localName === 'r' && element.namespaceURI === DRAWINGML_NAMESPACE);
+}
+
+function getShapeRunPositions(shape: Element): DrawingRunPosition[] {
+  const positions: DrawingRunPosition[] = [];
+  getDrawingParagraphs(shape).forEach((paragraph, paragraphIndex) => {
+    getDrawingRuns(paragraph).forEach((run, runIndex) => {
+      positions.push({ paragraphIndex, runIndex, run });
+    });
+  });
+  return positions;
+}
+
+function getRunProperties(run: Element, doc: XMLDocument): Element {
+  const existing = getElementChildren(run)
+    .find((element) => element.localName === 'rPr' && element.namespaceURI === DRAWINGML_NAMESPACE);
+  if (existing) {
+    return existing;
+  }
+
+  const rPr = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:rPr');
+  run.insertBefore(rPr, run.firstChild);
+  return rPr;
+}
+
+function insertRunPropertyChild(rPr: Element, child: Element): void {
+  const order = RUN_PROPERTY_CHILD_ORDER.indexOf(child.localName);
+  const reference = getElementChildren(rPr).find((existing) => {
+    const existingOrder = RUN_PROPERTY_CHILD_ORDER.indexOf(existing.localName);
+    return existingOrder !== -1 && existingOrder > order;
+  }) ?? null;
+  rPr.insertBefore(child, reference);
+}
+
+function setRunHighlight(rPr: Element, doc: XMLDocument, highlight: string | null): void {
+  getElementChildren(rPr)
+    .filter((element) => element.localName === 'highlight' && element.namespaceURI === DRAWINGML_NAMESPACE)
+    .forEach((element) => rPr.removeChild(element));
+
+  if (highlight === null) {
+    return;
+  }
+
+  const highlightElement = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:highlight');
+  const colorElement = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:srgbClr');
+  colorElement.setAttribute('val', normalizeHexColor(highlight));
+  highlightElement.appendChild(colorElement);
+  insertRunPropertyChild(rPr, highlightElement);
+}
+
+function normalizeHexColor(hex: string): string {
+  return hex.replace(/^#/, '').toUpperCase();
+}
+
+function setRunLatinFont(rPr: Element, doc: XMLDocument, fontFamily: string): void {
+  getElementChildren(rPr)
+    .filter((element) => element.localName === 'latin' && element.namespaceURI === DRAWINGML_NAMESPACE)
+    .forEach((element) => rPr.removeChild(element));
+
+  const latin = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:latin');
+  latin.setAttribute('typeface', fontFamily);
+  insertRunPropertyChild(rPr, latin);
+}
+
+function setRunSolidFill(rPr: Element, doc: XMLDocument, color: string | null): void {
+  getElementChildren(rPr)
+    .filter((element) => element.localName === 'solidFill' && element.namespaceURI === DRAWINGML_NAMESPACE)
+    .forEach((element) => rPr.removeChild(element));
+
+  if (color === null) {
+    return;
+  }
+
+  const solidFill = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:solidFill');
+  const colorElement = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:srgbClr');
+  colorElement.setAttribute('val', normalizeHexColor(color));
+  solidFill.appendChild(colorElement);
+  insertRunPropertyChild(rPr, solidFill);
+}
+
+// Apply every requested run-level property directly to an <a:rPr>. The WASM
+// renderer does not preserve <a:highlight> when it re-serializes a slide, so
+// every run-style edit (not just highlight) is performed via OOXML to keep the
+// highlight from being clobbered by a later renderer mutation on the same run.
+function applyRunPropertyChange(rPr: Element, doc: XMLDocument, change: RunStyleChange): void {
+  if (change.bold !== undefined) {
+    rPr.setAttribute('b', change.bold ? '1' : '0');
+  }
+  if (change.italic !== undefined) {
+    rPr.setAttribute('i', change.italic ? '1' : '0');
+  }
+  if (change.underline !== undefined) {
+    rPr.setAttribute('u', change.underline ? 'sng' : 'none');
+  }
+  if (change.fontSizePt !== undefined) {
+    rPr.setAttribute('sz', String(Math.round(change.fontSizePt * 100)));
+  }
+  if (change.fontFamily !== undefined && change.fontFamily !== '') {
+    setRunLatinFont(rPr, doc, change.fontFamily);
+  }
+  if (change.color !== undefined) {
+    setRunSolidFill(rPr, doc, change.color);
+  }
+  if (change.highlight !== undefined) {
+    setRunHighlight(rPr, doc, change.highlight);
+  }
+}
+
+function getParagraphProperties(paragraph: Element, doc: XMLDocument): Element {
+  const existing = getElementChildren(paragraph)
+    .find((element) => element.localName === 'pPr' && element.namespaceURI === DRAWINGML_NAMESPACE);
+  if (existing) {
+    return existing;
+  }
+
+  const pPr = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:pPr');
+  paragraph.insertBefore(pPr, paragraph.firstChild);
+  return pPr;
+}
+
+function resolvePptxRunAlignment(value: string | null): 'ctr' | 'just' | 'l' | 'r' | null {
+  if (value === 'l' || value === 'ctr' || value === 'r' || value === 'just') {
+    return value;
+  }
+  return null;
+}
+
 function resolvePartPath(sourcePath: string, target: string): string {
   const parts = sourcePath.split('/');
   parts.pop();
@@ -162,6 +511,112 @@ function resolvePartPath(sourcePath: string, target: string): string {
   }
 
   return parts.join('/');
+}
+
+function getPartExtension(partPath: string): string {
+  return partPath.match(/\.([^./]+)$/)?.[1]?.toLowerCase() ?? '';
+}
+
+function imageExtensionForMime(mimeType: string): string {
+  switch (mimeType.toLowerCase()) {
+    case 'image/jpeg':
+      return 'jpeg';
+    case 'image/gif':
+      return 'gif';
+    case 'image/webp':
+      return 'webp';
+    case 'image/bmp':
+      return 'bmp';
+    case 'image/png':
+    default:
+      return 'png';
+  }
+}
+
+function contentTypeForImageExtension(extension: string): string {
+  switch (extension.toLowerCase()) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'bmp':
+      return 'image/bmp';
+    case 'png':
+    default:
+      return 'image/png';
+  }
+}
+
+function createRelationshipsDocument(): XMLDocument {
+  return parseXml(
+    `<Relationships xmlns="${PACKAGE_RELATIONSHIP_NAMESPACE}"/>`,
+    '(new relationships part)'
+  );
+}
+
+function nextRelationshipId(relationships: XMLDocument): string {
+  const used = new Set(
+    getDescendants(relationships, 'Relationship')
+      .map((relationship) => relationship.getAttribute('Id'))
+      .filter((id): id is string => Boolean(id))
+  );
+  let next = 1;
+  while (used.has(`rId${next}`)) next++;
+  return `rId${next}`;
+}
+
+function nextImageMediaPath(
+  textFiles: Map<string, string>,
+  binaryFiles: Map<string, Uint8Array>,
+  extension: string
+): string {
+  let maxIndex = 0;
+  const pattern = /^ppt\/media\/image(\d+)\.[^./]+$/;
+  for (const key of [...textFiles.keys(), ...binaryFiles.keys()]) {
+    const match = key.match(pattern);
+    if (match) maxIndex = Math.max(maxIndex, Number(match[1]));
+  }
+  return `ppt/media/image${maxIndex + 1}.${extension}`;
+}
+
+function ensureDefaultContentType(
+  contentTypesDoc: XMLDocument,
+  extension: string,
+  contentType: string
+): void {
+  const normalized = extension.toLowerCase();
+  const exists = getDescendants(contentTypesDoc, 'Default')
+    .some((entry) => entry.getAttribute('Extension')?.toLowerCase() === normalized);
+  if (exists) return;
+
+  const namespace = contentTypesDoc.documentElement.namespaceURI;
+  const entry = contentTypesDoc.createElementNS(namespace, 'Default');
+  entry.setAttribute('Extension', normalized);
+  entry.setAttribute('ContentType', contentType);
+  contentTypesDoc.documentElement.appendChild(entry);
+}
+
+function getBlipEmbedId(blip: Element): string | null {
+  return blip.getAttributeNS(RELATIONSHIP_NAMESPACE, 'embed') || blip.getAttribute('r:embed');
+}
+
+function setBlipEmbedId(blip: Element, relationshipId: string): void {
+  const existing = blip.getAttributeNodeNS(RELATIONSHIP_NAMESPACE, 'embed');
+  if (existing) {
+    existing.value = relationshipId;
+  } else {
+    blip.setAttributeNS(RELATIONSHIP_NAMESPACE, 'r:embed', relationshipId);
+  }
+}
+
+// Convert an inset crop percentage (0-100) to the OOXML <a:srcRect> unit of
+// 1000ths of a percent (0-100000), clamped to the valid range.
+function cropPercentToPermille(percent: number): number {
+  if (!Number.isFinite(percent)) return 0;
+  return Math.max(0, Math.min(100000, Math.round(percent * 1000)));
 }
 
 function getSlidePath(slideIndex: number): string {
@@ -605,9 +1060,9 @@ async function normalizeSlideManifest(buffer: ArrayBuffer, slideCount: number): 
     throw new Error('Cannot normalize slide metadata because required OOXML parts are missing.');
   }
 
-  let nextRelationshipId = 1;
+  let nextRelId = 1;
   for (const match of relationships.matchAll(/\bId="rId(\d+)"/g)) {
-    nextRelationshipId = Math.max(nextRelationshipId, Number(match[1]) + 1);
+    nextRelId = Math.max(nextRelId, Number(match[1]) + 1);
   }
 
   const slideIds = Array.from(presentation.matchAll(/<p:sldId\b[^>]*\bid="(\d+)"[^>]*\/?>/g))
@@ -618,7 +1073,7 @@ async function normalizeSlideManifest(buffer: ArrayBuffer, slideCount: number): 
   const normalizedRelationships: string[] = [];
 
   for (let index = 0; index < slideCount; index++) {
-    const relationshipId = `rId${nextRelationshipId++}`;
+    const relationshipId = `rId${nextRelId++}`;
     const slideId = slideIds[index] ?? nextSlideId++;
     normalizedSlideEntries.push(`<p:sldId id="${slideId}" r:id="${relationshipId}"/>`);
     normalizedRelationships.push(
@@ -723,6 +1178,7 @@ interface ShapeIdentity {
   name: string;
   extensionList: Element | null;
   fingerprint: string;
+  shapeKind: string;
 }
 
 // When the renderer re-serializes a slide whose shapes were mutated, it strips each
@@ -744,12 +1200,17 @@ function restoreShapeNonVisualIdentity(previousDocument: XMLDocument, exportedDo
   if (previousShapes.length === exportedShapes.length) {
     exportedShapes.forEach((exported, index) => {
       const previous = previousShapes[index];
-      if (previous) pairs.push([previous, exported]);
+      if (previous && previous.shapeKind === exported.shapeKind) {
+        pairs.push([previous, exported]);
+      }
     });
   } else {
     const remaining = [...previousShapes];
     for (const exported of exportedShapes) {
-      const matchIndex = remaining.findIndex((candidate) => candidate.fingerprint === exported.fingerprint);
+      const matchIndex = remaining.findIndex(
+        (candidate) =>
+          candidate.shapeKind === exported.shapeKind && candidate.fingerprint === exported.fingerprint
+      );
       const previous = matchIndex >= 0 ? remaining[matchIndex] : undefined;
       if (previous) {
         pairs.push([previous, exported]);
@@ -788,7 +1249,8 @@ function collectShapeIdentities(document: XMLDocument): ShapeIdentity[] {
       id: cNvPr.getAttribute('id') ?? '',
       name: cNvPr.getAttribute('name') ?? '',
       extensionList: getDirectChild(cNvPr, 'extLst'),
-      fingerprint: getShapeFingerprint(shape)
+      fingerprint: getShapeFingerprint(shape),
+      shapeKind: shape?.localName ?? ''
     };
   });
 }
@@ -1050,6 +1512,27 @@ export class PresentationEngine {
     assertOk(addResult, 'Could not update shape text.');
   }
 
+  async updateParagraphText(
+    slideIndex: number,
+    shapeIndex: number,
+    paragraphIndex: number,
+    text: string
+  ): Promise<void> {
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) {
+      throw new Error(`Missing slide XML part: ${slidePath}`);
+    }
+
+    const slideDoc = parseXml(slideXml, slidePath);
+    const shape = getShapeElement(slideDoc, shapeIndex);
+    setDrawingParagraphText(shape, paragraphIndex, text);
+    const patchedExport = await buildZip(rawExport, new Map([[slidePath, serializeXml(slideDoc)]]));
+    await this.reloadFromBuffer(patchedExport, this.slideCountValue);
+  }
+
   async updateTextRun(
     slideIndex: number,
     shapeIndex: number,
@@ -1068,6 +1551,228 @@ export class PresentationEngine {
     const slideDoc = parseXml(slideXml, slidePath);
     const shape = getShapeElement(slideDoc, shapeIndex);
     setDrawingTextRun(shape, paragraphIndex, runIndex, text);
+    const patchedExport = await buildZip(rawExport, new Map([[slidePath, serializeXml(slideDoc)]]));
+    await this.reloadFromBuffer(patchedExport, this.slideCountValue);
+  }
+
+  /**
+   * Replace text across slides, returning how many occurrences were changed.
+   * Replacement happens within individual DrawingML text runs (a:t), so
+   * formatting on each run is preserved. Matches that span multiple runs are
+   * not substituted. Pass `slideIndex`/`shapeIndex` to limit the replacement to
+   * a single shape (used for "Replace" on the current match); omit them to
+   * replace everywhere ("Replace all").
+   */
+  async replaceText(
+    query: string,
+    replacement: string,
+    options: { matchCase?: boolean; slideIndex?: number; shapeIndex?: number } = {}
+  ): Promise<number> {
+    if (!query) {
+      return 0;
+    }
+
+    const matchCase = options.matchCase ?? false;
+    const scoped = options.slideIndex !== undefined && options.shapeIndex !== undefined;
+    const slideStart = scoped ? (options.slideIndex as number) : 0;
+    const slideEnd = scoped ? (options.slideIndex as number) + 1 : this.slideCountValue;
+
+    const rawExport = await this.exportRendererState();
+    const zip = await extractZip(rawExport);
+    const updatedFiles = new Map<string, string>();
+    let total = 0;
+
+    for (let slideIndex = slideStart; slideIndex < slideEnd; slideIndex++) {
+      const slidePath = getSlidePath(slideIndex);
+      const slideXml = zip.textFiles.get(slidePath);
+      if (!slideXml) continue;
+
+      const slideDoc = parseXml(slideXml, slidePath);
+      let scope: Element | XMLDocument = slideDoc;
+      if (scoped) {
+        try {
+          scope = getShapeElement(slideDoc, options.shapeIndex as number);
+        } catch {
+          continue;
+        }
+      }
+
+      const textElements = getDescendants(scope, 't')
+        .filter((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
+      let slideChanged = false;
+      for (const textElement of textElements) {
+        const original = textElement.textContent ?? '';
+        if (!original) continue;
+        const { result, count } = replaceTextOccurrences(original, query, replacement, matchCase);
+        if (count > 0) {
+          textElement.textContent = result;
+          total += count;
+          slideChanged = true;
+        }
+      }
+
+      if (slideChanged) {
+        updatedFiles.set(slidePath, serializeXml(slideDoc));
+      }
+    }
+
+    if (total > 0) {
+      const patchedExport = await buildZip(rawExport, updatedFiles);
+      await this.reloadFromBuffer(patchedExport, this.slideCountValue);
+    }
+
+    return total;
+  }
+
+  /**
+   * Read the resolved style of a single text run for reflecting toolbar state.
+   * Only directly-authored run/paragraph properties are reported; values
+   * inherited from a placeholder, layout, or master are not resolved here.
+   */
+  getRunStyle(
+    slideIndex: number,
+    shapeIndex: number,
+    paragraphIndex: number,
+    runIndex: number
+  ): RunStyleInfo | null {
+    let shape: Element;
+    try {
+      const slideDoc = parseXml(this.renderer.getSlideOoxml(slideIndex), getSlidePath(slideIndex));
+      shape = getShapeElement(slideDoc, shapeIndex);
+    } catch {
+      return null;
+    }
+
+    const paragraph = getDrawingParagraphs(shape)[paragraphIndex];
+    if (!paragraph) {
+      return null;
+    }
+
+    const run = getDrawingRuns(paragraph)[runIndex];
+    if (!run) {
+      return null;
+    }
+
+    const runProperties = getElementChildren(run)
+      .find((element) => element.localName === 'rPr' && element.namespaceURI === DRAWINGML_NAMESPACE) ?? null;
+    const paragraphProperties = getElementChildren(paragraph)
+      .find((element) => element.localName === 'pPr' && element.namespaceURI === DRAWINGML_NAMESPACE) ?? null;
+
+    const bold = runProperties?.getAttribute('b');
+    const italic = runProperties?.getAttribute('i');
+    const underline = runProperties?.getAttribute('u');
+    const fontSize = runProperties?.getAttribute('sz');
+    const latin = runProperties
+      ? getElementChildren(runProperties).find((element) => element.localName === 'latin')
+      : undefined;
+    const solidFill = runProperties
+      ? getElementChildren(runProperties).find((element) => element.localName === 'solidFill')
+      : undefined;
+    const fillColor = solidFill
+      ? getElementChildren(solidFill).find((element) => element.localName === 'srgbClr')
+      : undefined;
+    const highlight = runProperties
+      ? getElementChildren(runProperties).find((element) => element.localName === 'highlight')
+      : undefined;
+    const highlightColor = highlight
+      ? getElementChildren(highlight).find((element) => element.localName === 'srgbClr')
+      : undefined;
+    const parsedFontSize = fontSize ? Number(fontSize) : Number.NaN;
+
+    return {
+      bold: bold === '1' || bold === 'true',
+      italic: italic === '1' || italic === 'true',
+      underline: Boolean(underline) && underline !== 'none',
+      fontFamily: latin?.getAttribute('typeface') ?? null,
+      fontSizePt: Number.isFinite(parsedFontSize) ? parsedFontSize / 100 : null,
+      color: this.readColorValue(fillColor),
+      highlight: this.readColorValue(highlightColor),
+      alignment: resolvePptxRunAlignment(paragraphProperties?.getAttribute('algn') ?? null)
+    };
+  }
+
+  private readColorValue(colorElement: Element | undefined): string | null {
+    const value = colorElement?.getAttribute('val');
+    return value ? normalizeHexColor(value) : null;
+  }
+
+  /**
+   * Apply run-level formatting to a single run, or — when `target` is null — to
+   * every run in the shape. All properties (bold/italic/underline/size/color/
+   * font/highlight) are applied via direct OOXML editing rather than the WASM
+   * renderer's run-style setters: the renderer drops <a:highlight> whenever it
+   * re-serializes a slide, so routing every edit through OOXML keeps the
+   * highlight intact across subsequent formatting actions.
+   */
+  async setRunStyle(
+    slideIndex: number,
+    shapeIndex: number,
+    target: RunTarget | null,
+    change: RunStyleChange
+  ): Promise<void> {
+    await this.editSlideShape(slideIndex, shapeIndex, (shape, slideDoc) => {
+      const positions = getShapeRunPositions(shape);
+      const targets = target
+        ? positions.filter(
+            (position) => position.paragraphIndex === target.paragraphIndex && position.runIndex === target.runIndex
+          )
+        : positions;
+
+      let changed = false;
+      for (const { run } of targets) {
+        applyRunPropertyChange(getRunProperties(run, slideDoc), slideDoc, change);
+        changed = true;
+      }
+      return changed;
+    });
+  }
+
+  /**
+   * Set paragraph alignment on a single paragraph, or — when `paragraphIndex`
+   * is null — on every paragraph in the shape. Applied via OOXML for the same
+   * highlight-preservation reason as {@link setRunStyle}.
+   */
+  async setParagraphAlignment(
+    slideIndex: number,
+    shapeIndex: number,
+    paragraphIndex: number | null,
+    align: ParagraphAlignment
+  ): Promise<void> {
+    await this.editSlideShape(slideIndex, shapeIndex, (shape, slideDoc) => {
+      const paragraphs = getDrawingParagraphs(shape);
+      const targets = paragraphIndex !== null
+        ? [paragraphs[paragraphIndex]]
+        : paragraphs;
+
+      let changed = false;
+      for (const paragraph of targets) {
+        if (!paragraph) continue;
+        getParagraphProperties(paragraph, slideDoc).setAttribute('algn', align);
+        changed = true;
+      }
+      return changed;
+    });
+  }
+
+  private async editSlideShape(
+    slideIndex: number,
+    shapeIndex: number,
+    mutate: (shape: Element, slideDoc: XMLDocument) => boolean
+  ): Promise<void> {
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) {
+      throw new Error(`Missing slide XML part: ${slidePath}`);
+    }
+
+    const slideDoc = parseXml(slideXml, slidePath);
+    const shape = getShapeElement(slideDoc, shapeIndex);
+    if (!mutate(shape, slideDoc)) {
+      return;
+    }
+
     const patchedExport = await buildZip(rawExport, new Map([[slidePath, serializeXml(slideDoc)]]));
     await this.reloadFromBuffer(patchedExport, this.slideCountValue);
   }
@@ -1131,22 +1836,79 @@ export class PresentationEngine {
     await this.reloadFromBuffer(patchedExport, this.slideCountValue);
   }
 
+  private parseInsertedShapeIndex(result: string, fallback: string): number {
+    assertOk(result, fallback);
+    const shapeIndex = Number(result.split(':')[1]);
+    if (!Number.isFinite(shapeIndex)) {
+      throw new Error('The renderer did not return a valid shape index.');
+    }
+    return shapeIndex;
+  }
+
+  addImage(
+    slideIndex: number,
+    imageData: Uint8Array,
+    mimeType: string,
+    widthPx = 320,
+    heightPx = 240
+  ): number {
+    const x = pxToEmu(140);
+    const y = pxToEmu(120);
+    const cx = pxToEmu(widthPx);
+    const cy = pxToEmu(heightPx);
+    const result = this.renderer.addImage(slideIndex, imageData, mimeType, x, y, cx, cy);
+    return this.parseInsertedShapeIndex(result, 'Could not insert image.');
+  }
+
+  addShapeGeometry(slideIndex: number, geometry: InsertableShapeGeometry): number {
+    const x = pxToEmu(160);
+    const y = pxToEmu(140);
+    const cx = pxToEmu(geometry === 'line' ? 220 : 240);
+    const cy = pxToEmu(geometry === 'line' ? 0 : 160);
+    const result = this.renderer.addShape(slideIndex, geometry, x, y, cx, cy, 66, 133, 244);
+    return this.parseInsertedShapeIndex(result, 'Could not insert shape.');
+  }
+
   addTextBox(slideIndex: number): number {
     const x = pxToEmu(180);
     const y = pxToEmu(120);
     const cx = pxToEmu(300);
     const cy = pxToEmu(80);
     const result = this.renderer.addShape(slideIndex, 'rect', x, y, cx, cy, -1, -1, -1);
-    assertOk(result, 'Could not add text box.');
-
-    const shapeIndex = Number(result.split(':')[1]);
-    if (!Number.isFinite(shapeIndex)) {
-      throw new Error('The renderer did not return a valid shape index.');
-    }
+    const shapeIndex = this.parseInsertedShapeIndex(result, 'Could not add text box.');
 
     const textResult = this.renderer.addShapeText(slideIndex, shapeIndex, 'New text', 1800, -1, -1, -1);
     assertOk(textResult, 'Could not add text to the new text box.');
     return shapeIndex;
+  }
+
+  async addTable(slideIndex: number, rows: number, cols: number): Promise<number> {
+    const historyBuffer = await this.exportRendererState();
+    const inserted = await insertTableIntoPresentation(historyBuffer, slideIndex, rows, cols);
+    await this.reloadFromBuffer(inserted.buffer, this.slideCountValue);
+    return inserted.shapeIndex;
+  }
+
+  async addChart(slideIndex: number): Promise<number> {
+    const historyBuffer = await this.exportRendererState();
+    const inserted = await insertChartIntoPresentation(historyBuffer, slideIndex);
+    await this.reloadFromBuffer(inserted.buffer, this.slideCountValue);
+    await this.refreshChartTextValues(inserted.buffer);
+    return inserted.shapeIndex;
+  }
+
+  async applyListStyle(
+    slideIndex: number,
+    shapeIndex: number,
+    paragraphIndex: number,
+    style: ParagraphListStyle
+  ): Promise<void> {
+    const rawExport = await this.renderer.exportPptx();
+    const mergedSlide = await mergeSlideGraphicFramesFromBuffer(this.currentBuffer, rawExport, slideIndex);
+    const mergedPackage = await mergeMissingPackageParts(this.currentBuffer, mergedSlide);
+    const patched = await applyParagraphListStyle(mergedPackage, slideIndex, shapeIndex, paragraphIndex, style);
+    const preserved = await preserveSlideExtensionLists(this.currentBuffer, patched);
+    await this.reloadFromBuffer(preserved, this.slideCountValue);
   }
 
   deleteShape(slideIndex: number, shapeIndex: number): void {
@@ -1170,6 +1932,198 @@ export class PresentationEngine {
 
   async duplicateShape(slideIndex: number, shapeIndex: number): Promise<number> {
     return this.pasteShape(await this.copyShape(slideIndex, shapeIndex), slideIndex);
+  }
+
+  /**
+   * Apply a structural slide-XML mutation to a slide's shape tree, then reload
+   * the renderer from the patched buffer. The mutation runs against the live
+   * DOM and its return value is forwarded to the caller. Reordering, grouping,
+   * and ungrouping all edit OOXML directly (the renderer has no equivalent API)
+   * so the existing shape identities are preserved across the round-trip.
+   */
+  private async mutateSlideTree<T>(
+    slideIndex: number,
+    mutate: (slideDoc: XMLDocument, shapeTree: Element) => T
+  ): Promise<T> {
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) {
+      throw new Error(`Missing slide XML part: ${slidePath}`);
+    }
+
+    const slideDoc = parseXml(slideXml, slidePath);
+    const shapeTree = getDescendants(slideDoc, 'spTree')[0];
+    if (!shapeTree) {
+      throw new Error('Could not find the slide shape tree.');
+    }
+
+    const result = mutate(slideDoc, shapeTree);
+    const patchedExport = await buildZip(rawExport, new Map([[slidePath, serializeXml(slideDoc)]]));
+    await this.reloadFromBuffer(patchedExport, this.slideCountValue);
+    return result;
+  }
+
+  /**
+   * Change the stacking order of one or more top-level shapes on a slide.
+   * Selected shapes keep their relative order. Returns their new shape indices.
+   */
+  async reorderShapes(
+    slideIndex: number,
+    shapeIndexes: number[],
+    mode: ShapeReorderMode
+  ): Promise<number[]> {
+    return this.mutateSlideTree(slideIndex, (_slideDoc, shapeTree) => {
+      const shapes = getSpTreeShapes(shapeTree);
+      const selected = new Set(
+        shapeIndexes
+          .map((index) => shapes[index])
+          .filter((element): element is Element => Boolean(element))
+      );
+      if (selected.size === 0) {
+        throw new Error('Select an object to reorder.');
+      }
+
+      const ordered = shapes.filter((element) => selected.has(element));
+      if (mode === 'front') {
+        for (const element of ordered) shapeTree.appendChild(element);
+      } else if (mode === 'back') {
+        const anchor = shapes.find((element) => !selected.has(element)) ?? null;
+        if (anchor) {
+          for (const element of ordered) shapeTree.insertBefore(element, anchor);
+        }
+      } else if (mode === 'forward') {
+        for (let index = ordered.length - 1; index >= 0; index--) {
+          const element = ordered[index];
+          if (!element) continue;
+          const next = adjacentUnselectedShape(element, selected, 1);
+          if (next) shapeTree.insertBefore(element, next.nextSibling);
+        }
+      } else {
+        for (const element of ordered) {
+          const previous = adjacentUnselectedShape(element, selected, -1);
+          if (previous) shapeTree.insertBefore(element, previous);
+        }
+      }
+
+      const finalShapes = getSpTreeShapes(shapeTree);
+      return ordered.map((element) => finalShapes.indexOf(element));
+    });
+  }
+
+  /**
+   * Wrap the selected top-level shapes into a new group. The group's bounding
+   * box is the union of the children, and chOff/chExt mirror off/ext so each
+   * child keeps its slide coordinates. Returns the new group's shape index.
+   */
+  async groupShapes(slideIndex: number, shapeIndexes: number[]): Promise<number> {
+    return this.mutateSlideTree(slideIndex, (slideDoc, shapeTree) => {
+      const shapes = getSpTreeShapes(shapeTree);
+      const selected = new Set(
+        shapeIndexes
+          .map((index) => shapes[index])
+          .filter((element): element is Element => Boolean(element))
+      );
+      if (selected.size < 2) {
+        throw new Error('Select at least two objects to group.');
+      }
+
+      const ordered = shapes.filter((element) => selected.has(element));
+      const anchor = ordered[0];
+      if (!anchor) {
+        throw new Error('Could not resolve the objects to group.');
+      }
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const element of ordered) {
+        const box = getShapeBox(element);
+        if (!box) continue;
+        minX = Math.min(minX, box.x);
+        minY = Math.min(minY, box.y);
+        maxX = Math.max(maxX, box.x + box.cx);
+        maxY = Math.max(maxY, box.y + box.cy);
+      }
+      if (!Number.isFinite(minX)) {
+        minX = 0;
+        minY = 0;
+        maxX = 0;
+        maxY = 0;
+      }
+
+      const offsetX = minX;
+      const offsetY = minY;
+      const extentCx = Math.max(1, maxX - minX);
+      const extentCy = Math.max(1, maxY - minY);
+      const presentationNs = shapeTree.namespaceURI;
+      const newId = nextShapeId(slideDoc);
+
+      const groupShape = slideDoc.createElementNS(presentationNs, qualifyName(shapeTree, 'grpSp'));
+      const nonVisual = slideDoc.createElementNS(presentationNs, qualifyName(shapeTree, 'nvGrpSpPr'));
+      const cNvPr = slideDoc.createElementNS(presentationNs, qualifyName(shapeTree, 'cNvPr'));
+      cNvPr.setAttribute('id', String(newId));
+      cNvPr.setAttribute('name', `Group ${newId}`);
+      const cNvGrpSpPr = slideDoc.createElementNS(presentationNs, qualifyName(shapeTree, 'cNvGrpSpPr'));
+      const nvPr = slideDoc.createElementNS(presentationNs, qualifyName(shapeTree, 'nvPr'));
+      nonVisual.appendChild(cNvPr);
+      nonVisual.appendChild(cNvGrpSpPr);
+      nonVisual.appendChild(nvPr);
+
+      const groupProps = slideDoc.createElementNS(presentationNs, qualifyName(shapeTree, 'grpSpPr'));
+      const xfrm = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:xfrm');
+      const off = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:off');
+      off.setAttribute('x', String(Math.round(offsetX)));
+      off.setAttribute('y', String(Math.round(offsetY)));
+      const ext = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:ext');
+      ext.setAttribute('cx', String(Math.round(extentCx)));
+      ext.setAttribute('cy', String(Math.round(extentCy)));
+      const chOff = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:chOff');
+      chOff.setAttribute('x', String(Math.round(offsetX)));
+      chOff.setAttribute('y', String(Math.round(offsetY)));
+      const chExt = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:chExt');
+      chExt.setAttribute('cx', String(Math.round(extentCx)));
+      chExt.setAttribute('cy', String(Math.round(extentCy)));
+      xfrm.appendChild(off);
+      xfrm.appendChild(ext);
+      xfrm.appendChild(chOff);
+      xfrm.appendChild(chExt);
+      groupProps.appendChild(xfrm);
+
+      groupShape.appendChild(nonVisual);
+      groupShape.appendChild(groupProps);
+      shapeTree.insertBefore(groupShape, anchor);
+      for (const element of ordered) groupShape.appendChild(element);
+
+      return getSpTreeShapes(shapeTree).indexOf(groupShape);
+    });
+  }
+
+  /**
+   * Unwrap a group: move its child shapes back into the slide shape tree at the
+   * group's position and remove the now-empty group. Child coordinates stay
+   * valid because grouped shapes are stored with chOff/chExt equal to off/ext.
+   * Returns the resulting shape indices of the freed children.
+   */
+  async ungroupShapes(slideIndex: number, shapeIndex: number): Promise<number[]> {
+    return this.mutateSlideTree(slideIndex, (_slideDoc, shapeTree) => {
+      const shapes = getSpTreeShapes(shapeTree);
+      const group = shapes[shapeIndex];
+      if (!group || group.localName !== 'grpSp') {
+        throw new Error('Select a group to ungroup.');
+      }
+
+      const children = getElementChildren(group).filter((element) =>
+        SHAPE_ELEMENT_NAMES.has(element.localName)
+      );
+      for (const child of children) shapeTree.insertBefore(child, group);
+      shapeTree.removeChild(group);
+
+      const finalShapes = getSpTreeShapes(shapeTree);
+      return children.map((element) => finalShapes.indexOf(element));
+    });
   }
 
   async addSlide(afterIndex: number): Promise<SlideMoveResult> {
@@ -1204,6 +2158,488 @@ export class PresentationEngine {
     const { slideCount } = await this.renderer.reorderSlides(order);
     await this.reloadAfterSlideManagement(slideCount);
     return { slideIndex: targetIndex, slideCount };
+  }
+
+  async duplicateSlide(slideIndex: number): Promise<SlideMoveResult> {
+    const { slideCount, insertedIdx } = await this.renderer.addSlide(slideIndex, slideIndex);
+    await this.reloadAfterSlideManagement(slideCount);
+    return { slideIndex: insertedIdx, slideCount };
+  }
+
+  async reorderSlides(newOrder: number[]): Promise<SlideMoveResult> {
+    const { slideCount } = await this.renderer.reorderSlides(newOrder);
+    await this.reloadAfterSlideManagement(slideCount);
+    return { slideIndex: 0, slideCount };
+  }
+
+  async addSlideWithLayout(afterIndex: number, layout: SlideLayoutKind): Promise<SlideMoveResult> {
+    const result = await this.addSlide(afterIndex);
+    if (layout === 'blank') {
+      return result;
+    }
+
+    const slideIndex = result.slideIndex;
+    const { cx, cy } = await this.getSlideSizeEmu();
+    const margin = pxToEmu(48);
+    const contentWidth = Math.max(pxToEmu(120), cx - margin * 2);
+
+    if (layout === 'title') {
+      const titleHeight = pxToEmu(140);
+      this.addLayoutPlaceholder(
+        slideIndex,
+        'Click to add title',
+        margin,
+        Math.max(margin, Math.round((cy - titleHeight) / 2)),
+        contentWidth,
+        titleHeight,
+        4000,
+        true
+      );
+    } else {
+      const titleHeight = pxToEmu(120);
+      this.addLayoutPlaceholder(slideIndex, 'Click to add title', margin, margin, contentWidth, titleHeight, 3600, true);
+      const bodyTop = margin + titleHeight + pxToEmu(24);
+      const bodyHeight = Math.max(pxToEmu(120), cy - bodyTop - margin);
+      this.addLayoutPlaceholder(slideIndex, 'Click to add text', margin, bodyTop, contentWidth, bodyHeight, 1800, false);
+    }
+
+    return result;
+  }
+
+  private addLayoutPlaceholder(
+    slideIndex: number,
+    text: string,
+    x: number,
+    y: number,
+    cx: number,
+    cy: number,
+    fontSize: number,
+    center: boolean
+  ): void {
+    const shapeResult = this.renderer.addShape(
+      slideIndex,
+      'rect',
+      Math.round(x),
+      Math.round(y),
+      Math.max(1, Math.round(cx)),
+      Math.max(1, Math.round(cy)),
+      -1,
+      -1,
+      -1
+    );
+    const shapeIndex = this.parseInsertedShapeIndex(shapeResult, 'Could not add layout placeholder.');
+    assertOk(
+      this.renderer.addShapeText(slideIndex, shapeIndex, text, fontSize, -1, -1, -1),
+      'Could not add layout placeholder text.'
+    );
+    if (center) {
+      this.renderer.updateParagraphAlign(slideIndex, shapeIndex, 0, 'ctr');
+    }
+  }
+
+  async getSlideSizeEmu(): Promise<{ cx: number; cy: number }> {
+    const fallback = { cx: 9144000, cy: 6858000 };
+    try {
+      const presentationPath = 'ppt/presentation.xml';
+      const zip = await extractZip(this.currentBuffer);
+      const presentationXml = zip.textFiles.get(presentationPath);
+      if (!presentationXml) {
+        return fallback;
+      }
+
+      const slideSize = getDescendants(parseXml(presentationXml, presentationPath), 'sldSz')[0];
+      const cx = Number(slideSize?.getAttribute('cx'));
+      const cy = Number(slideSize?.getAttribute('cy'));
+      return {
+        cx: Number.isFinite(cx) && cx > 0 ? cx : fallback.cx,
+        cy: Number.isFinite(cy) && cy > 0 ? cy : fallback.cy
+      };
+    } catch {
+      return fallback;
+    }
+  }
+
+  async setSlideBackgroundColor(slideIndex: number, hex: string): Promise<void> {
+    const normalizedHex = hex.replace(/^#/, '').trim().toUpperCase();
+    if (!/^[0-9A-F]{6}$/.test(normalizedHex)) {
+      throw new Error('Background color must be a 6-digit RRGGBB hex value.');
+    }
+
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) {
+      throw new Error(`Missing slide XML part: ${slidePath}`);
+    }
+
+    const slideDoc = parseXml(slideXml, slidePath);
+    const commonSlide = getDescendants(slideDoc, 'cSld')[0];
+    if (!commonSlide) {
+      throw new Error('Slide is missing its common slide data.');
+    }
+
+    const presentationNamespace = slideDoc.documentElement.namespaceURI;
+    for (const existingBackground of getElementChildren(commonSlide).filter((element) => element.localName === 'bg')) {
+      commonSlide.removeChild(existingBackground);
+    }
+
+    const background = slideDoc.createElementNS(presentationNamespace, 'p:bg');
+    const backgroundProperties = slideDoc.createElementNS(presentationNamespace, 'p:bgPr');
+    const solidFill = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:solidFill');
+    const color = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:srgbClr');
+    color.setAttribute('val', normalizedHex);
+    solidFill.appendChild(color);
+    backgroundProperties.appendChild(solidFill);
+    backgroundProperties.appendChild(slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:effectLst'));
+    background.appendChild(backgroundProperties);
+    commonSlide.insertBefore(background, commonSlide.firstChild);
+
+    const patchedExport = await buildZip(rawExport, new Map([[slidePath, serializeXml(slideDoc)]]));
+    await this.reloadFromBuffer(patchedExport, this.slideCountValue);
+  }
+
+  getSlideBackgroundColor(slideIndex: number): string | null {
+    try {
+      const slideXml = this.renderer.getSlideOoxml(slideIndex);
+      if (!slideXml || slideXml.startsWith('ERROR:')) {
+        return null;
+      }
+
+      const commonSlide = getDescendants(parseXml(slideXml, getSlidePath(slideIndex)), 'cSld')[0];
+      const background = commonSlide
+        ? getElementChildren(commonSlide).find((element) => element.localName === 'bg')
+        : undefined;
+      if (!background) {
+        return null;
+      }
+
+      const value = getDescendants(background, 'srgbClr')[0]?.getAttribute('val');
+      return value && /^[0-9A-Fa-f]{6}$/.test(value) ? value.toUpperCase() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Report whether a top-level shape is an embedded picture (`p:pic` with an
+   * `<a:blip>`). Read directly from the slide OOXML so image-only menu items
+   * are gated on the authoritative model rather than the rendered SVG.
+   */
+  isImageShape(slideIndex: number, shapeIndex: number): boolean {
+    try {
+      const slideDoc = parseXml(this.renderer.getSlideOoxml(slideIndex), getSlidePath(slideIndex));
+      const shape = getShapeElement(slideDoc, shapeIndex);
+      if (shape.localName !== 'pic') return false;
+      return getDescendants(shape, 'blip').some((blip) => Boolean(getBlipEmbedId(blip)));
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Read the current inset crop (`<a:srcRect>`) of a picture as percentages.
+   * Returns zeros when the picture is uncropped, or null when the shape is not
+   * a picture.
+   */
+  getImageCrop(slideIndex: number, shapeIndex: number): ImageCrop | null {
+    try {
+      const slideDoc = parseXml(this.renderer.getSlideOoxml(slideIndex), getSlidePath(slideIndex));
+      const shape = getShapeElement(slideDoc, shapeIndex);
+      if (shape.localName !== 'pic') return null;
+
+      const srcRect = getDescendants(shape, 'srcRect')[0];
+      const read = (attribute: string): number => {
+        const value = Number(srcRect?.getAttribute(attribute));
+        return Number.isFinite(value) ? value / 1000 : 0;
+      };
+      return { left: read('l'), top: read('t'), right: read('r'), bottom: read('b') };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Apply an inset crop to a picture via `<a:srcRect>` inside its `<a:blipFill>`.
+   * Percentages are stored in OOXML 1000ths-of-a-percent units. Position and
+   * size are untouched.
+   */
+  async setImageCrop(slideIndex: number, shapeIndex: number, crop: ImageCrop): Promise<void> {
+    await this.editSlideShape(slideIndex, shapeIndex, (shape, slideDoc) => {
+      if (shape.localName !== 'pic') {
+        throw new Error('The selected object is not an image.');
+      }
+
+      const blipFill = getDescendants(shape, 'blipFill')[0];
+      if (!blipFill) {
+        throw new Error('The selected image has no picture fill to crop.');
+      }
+
+      let srcRect = getElementChildren(blipFill)
+        .find((element) => element.localName === 'srcRect' && element.namespaceURI === DRAWINGML_NAMESPACE);
+      if (!srcRect) {
+        srcRect = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:srcRect');
+        // CT_BlipFillProperties order: blip, srcRect, (tile | stretch).
+        const fillMode = getElementChildren(blipFill)
+          .find((element) => element.localName === 'stretch' || element.localName === 'tile');
+        if (fillMode) {
+          blipFill.insertBefore(srcRect, fillMode);
+        } else {
+          blipFill.appendChild(srcRect);
+        }
+      }
+
+      srcRect.setAttribute('l', String(cropPercentToPermille(crop.left)));
+      srcRect.setAttribute('t', String(cropPercentToPermille(crop.top)));
+      srcRect.setAttribute('r', String(cropPercentToPermille(crop.right)));
+      srcRect.setAttribute('b', String(cropPercentToPermille(crop.bottom)));
+      return true;
+    });
+  }
+
+  /**
+   * Reset a picture to its original appearance: removes any inset crop
+   * (`<a:srcRect>`) and common recolor effects (duotone, biLevel, grayscl, lum,
+   * clrChange) from the `<a:blip>`. Position, size, and the embedded image are
+   * preserved.
+   */
+  async resetImage(slideIndex: number, shapeIndex: number): Promise<void> {
+    const recolorEffects = new Set(['duotone', 'biLevel', 'grayscl', 'lum', 'clrChange']);
+    await this.editSlideShape(slideIndex, shapeIndex, (shape) => {
+      if (shape.localName !== 'pic') {
+        throw new Error('The selected object is not an image.');
+      }
+
+      const blipFill = getDescendants(shape, 'blipFill')[0];
+      if (!blipFill) return false;
+
+      let changed = false;
+      for (const srcRect of getElementChildren(blipFill).filter((element) => element.localName === 'srcRect')) {
+        blipFill.removeChild(srcRect);
+        changed = true;
+      }
+
+      const blip = getElementChildren(blipFill).find((element) => element.localName === 'blip');
+      if (blip) {
+        for (const effect of getElementChildren(blip).filter((element) => recolorEffects.has(element.localName))) {
+          blip.removeChild(effect);
+          changed = true;
+        }
+      }
+      return changed;
+    });
+  }
+
+  /**
+   * Toggle a horizontal or vertical flip on a shape by editing the `flipH` /
+   * `flipV` attributes of its `<a:xfrm>`. The renderer's transform API does not
+   * expose flip, so this is applied directly in OOXML.
+   */
+  async flipShape(slideIndex: number, shapeIndex: number, axis: 'horizontal' | 'vertical'): Promise<void> {
+    await this.editSlideShape(slideIndex, shapeIndex, (shape) => {
+      const xfrm = getDescendants(shape, 'xfrm')[0];
+      if (!xfrm) {
+        throw new Error('The selected object cannot be flipped.');
+      }
+
+      const attribute = axis === 'horizontal' ? 'flipH' : 'flipV';
+      const current = xfrm.getAttribute(attribute);
+      if (current === '1' || current === 'true') {
+        xfrm.removeAttribute(attribute);
+      } else {
+        xfrm.setAttribute(attribute, '1');
+      }
+      return true;
+    });
+  }
+
+  /**
+   * Swap the picture's embedded image for new bytes while preserving its
+   * position, size, and crop. A fresh media part and slide relationship are
+   * added, the `<a:blip r:embed>` is repointed, and the content-type default is
+   * registered for the new extension. The previous media part is left in place.
+   */
+  async replaceImage(
+    slideIndex: number,
+    shapeIndex: number,
+    bytes: Uint8Array,
+    mimeType: string
+  ): Promise<void> {
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) {
+      throw new Error(`Missing slide XML part: ${slidePath}`);
+    }
+
+    const slideDoc = parseXml(slideXml, slidePath);
+    const shape = getShapeElement(slideDoc, shapeIndex);
+    if (shape.localName !== 'pic') {
+      throw new Error('The selected object is not an image.');
+    }
+
+    const blip = getDescendants(shape, 'blip')[0];
+    if (!blip) {
+      throw new Error('The selected image has no embedded picture data.');
+    }
+
+    const extension = imageExtensionForMime(mimeType);
+    const mediaPath = nextImageMediaPath(zip.textFiles, zip.binaryFiles, extension);
+    const relationship = this.buildSlideImageRelationship(zip, slideIndex, mediaPath);
+    setBlipEmbedId(blip, relationship.relationshipId);
+
+    const contentTypesDoc = parseXml(
+      zip.textFiles.get('[Content_Types].xml') ?? '<Types/>',
+      '[Content_Types].xml'
+    );
+    ensureDefaultContentType(contentTypesDoc, extension, contentTypeForImageExtension(extension));
+
+    const textModifications = new Map<string, string>([
+      [slidePath, serializeXml(slideDoc)],
+      [relationship.relationshipsPath, relationship.relationshipsXml],
+      ['[Content_Types].xml', serializeXml(contentTypesDoc)]
+    ]);
+    const binaryModifications = new Map<string, Uint8Array>([[mediaPath, bytes]]);
+
+    const patched = await buildZip(rawExport, textModifications, undefined, binaryModifications);
+    await this.reloadFromBuffer(patched, this.slideCountValue);
+  }
+
+  /**
+   * Read the bytes of a picture's embedded image by resolving its
+   * `<a:blip r:embed>` relationship to a media part. Returns null when the
+   * shape is not a picture or the media part cannot be located.
+   */
+  async getShapeImageData(slideIndex: number, shapeIndex: number): Promise<ShapeImageData | null> {
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) return null;
+
+    const shape = getShapeElement(parseXml(slideXml, slidePath), shapeIndex);
+    if (shape.localName !== 'pic') return null;
+
+    const blip = getDescendants(shape, 'blip')[0];
+    const relationshipId = blip ? getBlipEmbedId(blip) : null;
+    if (!relationshipId) return null;
+
+    const relationshipsPath = getSlideRelationshipsPath(slideIndex);
+    const relationshipsXml = zip.textFiles.get(relationshipsPath);
+    if (!relationshipsXml) return null;
+
+    const relationship = getDescendants(parseXml(relationshipsXml, relationshipsPath), 'Relationship')
+      .find((element) => element.getAttribute('Id') === relationshipId);
+    const target = relationship?.getAttribute('Target');
+    if (!target || relationship?.getAttribute('TargetMode') === 'External') return null;
+
+    const mediaPath = resolvePartPath(slidePath, target);
+    const bytes = zip.binaryFiles.get(mediaPath);
+    if (!bytes) return null;
+
+    return {
+      bytes: bytes.slice(),
+      mimeType: contentTypeForImageExtension(getPartExtension(mediaPath))
+    };
+  }
+
+  /**
+   * Set the slide background to a stretched image, mirroring how
+   * {@link setSlideBackgroundColor} rebuilds `<p:bg><p:bgPr>`. A new media part
+   * and slide relationship are created and any existing background is replaced.
+   */
+  async setSlideBackgroundImage(
+    slideIndex: number,
+    bytes: Uint8Array,
+    mimeType: string
+  ): Promise<void> {
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) {
+      throw new Error(`Missing slide XML part: ${slidePath}`);
+    }
+
+    const slideDoc = parseXml(slideXml, slidePath);
+    const commonSlide = getDescendants(slideDoc, 'cSld')[0];
+    if (!commonSlide) {
+      throw new Error('Slide is missing its common slide data.');
+    }
+
+    const extension = imageExtensionForMime(mimeType);
+    const mediaPath = nextImageMediaPath(zip.textFiles, zip.binaryFiles, extension);
+    const relationship = this.buildSlideImageRelationship(zip, slideIndex, mediaPath);
+
+    const presentationNamespace = slideDoc.documentElement.namespaceURI;
+    for (const existingBackground of getElementChildren(commonSlide).filter((element) => element.localName === 'bg')) {
+      commonSlide.removeChild(existingBackground);
+    }
+
+    const background = slideDoc.createElementNS(presentationNamespace, 'p:bg');
+    const backgroundProperties = slideDoc.createElementNS(presentationNamespace, 'p:bgPr');
+    const blipFill = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:blipFill');
+    const blip = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:blip');
+    setBlipEmbedId(blip, relationship.relationshipId);
+    blipFill.appendChild(blip);
+    const stretch = slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:stretch');
+    stretch.appendChild(slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:fillRect'));
+    blipFill.appendChild(stretch);
+    backgroundProperties.appendChild(blipFill);
+    backgroundProperties.appendChild(slideDoc.createElementNS(DRAWINGML_NAMESPACE, 'a:effectLst'));
+    background.appendChild(backgroundProperties);
+    commonSlide.insertBefore(background, commonSlide.firstChild);
+
+    const contentTypesDoc = parseXml(
+      zip.textFiles.get('[Content_Types].xml') ?? '<Types/>',
+      '[Content_Types].xml'
+    );
+    ensureDefaultContentType(contentTypesDoc, extension, contentTypeForImageExtension(extension));
+
+    const textModifications = new Map<string, string>([
+      [slidePath, serializeXml(slideDoc)],
+      [relationship.relationshipsPath, relationship.relationshipsXml],
+      ['[Content_Types].xml', serializeXml(contentTypesDoc)]
+    ]);
+    const binaryModifications = new Map<string, Uint8Array>([[mediaPath, bytes]]);
+
+    const patched = await buildZip(rawExport, textModifications, undefined, binaryModifications);
+    await this.reloadFromBuffer(patched, this.slideCountValue);
+  }
+
+  /**
+   * Compose a new image relationship for a slide's `.rels` part. Returns the
+   * new relationship id alongside the serialized relationships XML and its part
+   * path, so the caller can include them in a single buildZip pass (the
+   * extracted zip is not mutated here).
+   */
+  private buildSlideImageRelationship(
+    zip: { textFiles: Map<string, string>; binaryFiles: Map<string, Uint8Array> },
+    slideIndex: number,
+    mediaPath: string
+  ): { relationshipId: string; relationshipsPath: string; relationshipsXml: string } {
+    const relationshipsPath = getSlideRelationshipsPath(slideIndex);
+    const relationshipsXml = zip.textFiles.get(relationshipsPath);
+    const relationships = relationshipsXml
+      ? parseXml(relationshipsXml, relationshipsPath)
+      : createRelationshipsDocument();
+
+    const relationshipId = nextRelationshipId(relationships);
+    const relationship = relationships.createElementNS(
+      relationships.documentElement.namespaceURI,
+      'Relationship'
+    );
+    relationship.setAttribute('Id', relationshipId);
+    relationship.setAttribute('Type', IMAGE_RELATIONSHIP_TYPE);
+    relationship.setAttribute('Target', `../media/${mediaPath.split('/').pop()}`);
+    relationships.documentElement.appendChild(relationship);
+
+    return {
+      relationshipId,
+      relationshipsPath,
+      relationshipsXml: serializeXml(relationships)
+    };
   }
 
   async export(): Promise<ArrayBuffer> {

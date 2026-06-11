@@ -20,6 +20,7 @@ export interface NativePowerPointSettings {
 	autosaveEnabled: boolean;
 	hideUnsupportedSvgContent: boolean;
 	openWithYoloMode: boolean;
+	showInspector: boolean;
 	setOpenWithYoloMode: (value: boolean) => Promise<void>;
 }
 
@@ -36,6 +37,7 @@ export interface DocxidianSettings {
 	powerPointAutosaveEnabled: boolean;
 	powerPointHideUnsupportedSvgContent: boolean;
 	powerPointOpenWithYoloMode: boolean;
+	powerPointShowInspector: boolean;
 	disableDocxFiles: boolean;
 	disablePowerPointFiles: boolean;
 }
@@ -53,6 +55,7 @@ export const DEFAULT_SETTINGS: DocxidianSettings = {
 	powerPointAutosaveEnabled: true,
 	powerPointHideUnsupportedSvgContent: false,
 	powerPointOpenWithYoloMode: false,
+	powerPointShowInspector: false,
 	disableDocxFiles: false,
 	disablePowerPointFiles: false,
 };
@@ -65,6 +68,7 @@ export function getNativePowerPointSettings(
 		autosaveEnabled: settings.powerPointAutosaveEnabled,
 		hideUnsupportedSvgContent: settings.powerPointHideUnsupportedSvgContent,
 		openWithYoloMode: settings.powerPointOpenWithYoloMode,
+		showInspector: settings.powerPointShowInspector,
 		setOpenWithYoloMode,
 	};
 }
@@ -262,6 +266,17 @@ export class DocxidianSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Show inspector panel')
+			.setDesc('Show the object inspector panel on the right side of the PowerPoint editor. Off by default.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.powerPointShowInspector)
+				.onChange(async (value) => {
+					this.plugin.settings.powerPointShowInspector = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshPowerPointViews();
+				}));
+
+		new Setting(containerEl)
 			.setName('Hide unsupported SVG details')
 			.setDesc('Temporarily hide unsupported PowerPoint SVG details in the Obsidian preview. Off by default. This does not delete them from the PPTX file.')
 			.addToggle(toggle => toggle
@@ -355,5 +370,16 @@ export class DocxidianSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					await this.plugin.copyDebugLog('all');
 				}));
+
+		const reportBugBox = containerEl.createDiv({ cls: 'native-powerpoint-report-bug' });
+		reportBugBox.createEl('a', {
+			cls: 'native-powerpoint-report-bug-link',
+			text: 'Report bug',
+			attr: {
+				href: 'https://github.com/MarsLuay/NativePowerPointDocEditor/issues',
+				rel: 'noopener noreferrer',
+				target: '_blank',
+			},
+		});
 	}
 }

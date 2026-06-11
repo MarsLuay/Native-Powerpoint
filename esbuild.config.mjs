@@ -1,7 +1,8 @@
 import esbuild from "esbuild";
 import process from "process";
 import { builtinModules } from 'node:module';
-import { readFile } from "fs/promises";
+import { access, copyFile, readFile } from "fs/promises";
+import path from "node:path";
 
 const banner =
 `/*
@@ -11,6 +12,42 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === "production");
+
+// Copy the build artifacts into the running Obsidian plugin folder so changes
+// take effect on reload. Resolves to the vault plugin dir when this repo lives
+// inside the vault (../../.obsidian/plugins/<id>), and is skipped silently when
+// that folder is absent (e.g. CI or a clone outside the vault). Override with
+// OBSIDIAN_PLUGIN_DIR.
+const vaultPluginDir =
+	process.env.OBSIDIAN_PLUGIN_DIR
+	|| path.resolve("../../.obsidian/plugins/native-powerpoint-doc-editor");
+const filesToDeploy = ["main.js", "styles.css", "manifest.json"];
+
+const deployToVaultPlugin = {
+	name: "deploy-to-vault-plugin",
+	setup(build) {
+		build.onEnd(async (result) => {
+			if (result.errors.length > 0) return;
+
+			try {
+				await access(vaultPluginDir);
+			} catch {
+				return;
+			}
+
+			await Promise.all(
+				filesToDeploy.map(async (file) => {
+					try {
+						await copyFile(path.resolve(file), path.join(vaultPluginDir, file));
+					} catch (error) {
+						console.warn(`[deploy] could not copy ${file}: ${error.message}`);
+					}
+				})
+			);
+			console.log(`[deploy] synced ${filesToDeploy.join(", ")} -> ${vaultPluginDir}`);
+		});
+	}
+};
 
 const inlinePptxSvgWasmPlugin = {
 	name: "inline-pptx-svg-wasm",
@@ -77,7 +114,7 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
-	plugins: [inlinePptxSvgWasmPlugin],
+	plugins: [inlinePptxSvgWasmPlugin, deployToVaultPlugin],
 	outdir: ".",
 	entryNames: "[name]",
 	minify: prod,

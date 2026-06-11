@@ -4,6 +4,10 @@ Native PowerPoint Doc Editor is an Obsidian plugin for opening, searching, and e
 
 The plugin keeps Office files in place instead of converting them to Markdown. It is designed for school, work, and research vaults where Word documents and PowerPoint decks need small edits, search, review, or quick inspection without leaving Obsidian.
 
+![Native PowerPoint Doc Editor](screenshot.png)
+
+A DOCX file open in the editor view, with the formatting toolbar and the document rendered inline in Obsidian.
+
 ## Features
 
 - Open DOCX files in a native editor view

@@ -232,11 +232,11 @@ function getPartLabel(partPath: string): string {
 		return 'Document body';
 	}
 
-	if (/^word\/headers\//.test(partPath)) {
+	if (partPath.startsWith('word/headers/')) {
 		return 'Header';
 	}
 
-	if (/^word\/footers\//.test(partPath)) {
+	if (partPath.startsWith('word/footers/')) {
 		return 'Footer';
 	}
 

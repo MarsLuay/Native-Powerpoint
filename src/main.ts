@@ -107,6 +107,7 @@ export default class DocxidianPlugin extends Plugin {
 			typeof savedSettings?.powerPointOpenWithYoloMode === 'boolean'
 				? savedSettings.powerPointOpenWithYoloMode
 				: legacySettings?.powerPointYoloMode === true;
+		const normalizedPowerPointShowInspector = this.settings.powerPointShowInspector === true;
 		const normalizedDisableDocxFiles = this.settings.disableDocxFiles === true;
 		const normalizedDisablePowerPointFiles = this.settings.disablePowerPointFiles === true;
 		const shouldPersistSettings = savedSettings?.editorLanguage !== normalizedLanguage
@@ -117,6 +118,7 @@ export default class DocxidianPlugin extends Plugin {
 			|| savedSettings?.powerPointAutosaveEnabled !== normalizedPowerPointAutosaveEnabled
 			|| savedSettings?.powerPointHideUnsupportedSvgContent !== normalizedPowerPointHideUnsupportedSvgContent
 			|| savedSettings?.powerPointOpenWithYoloMode !== normalizedPowerPointOpenWithYoloMode
+			|| savedSettings?.powerPointShowInspector !== normalizedPowerPointShowInspector
 			|| legacySettings?.powerPointRemoveUnsupportedSvgContent !== undefined
 			|| legacySettings?.powerPointYoloMode !== undefined
 			|| savedSettings?.disableDocxFiles !== normalizedDisableDocxFiles
@@ -130,6 +132,7 @@ export default class DocxidianPlugin extends Plugin {
 		this.settings.powerPointAutosaveEnabled = normalizedPowerPointAutosaveEnabled;
 		this.settings.powerPointHideUnsupportedSvgContent = normalizedPowerPointHideUnsupportedSvgContent;
 		this.settings.powerPointOpenWithYoloMode = normalizedPowerPointOpenWithYoloMode;
+		this.settings.powerPointShowInspector = normalizedPowerPointShowInspector;
 		this.settings.disableDocxFiles = normalizedDisableDocxFiles;
 		this.settings.disablePowerPointFiles = normalizedDisablePowerPointFiles;
 		delete (this.settings as unknown as Record<string, unknown>).powerPointRemoveUnsupportedSvgContent;
@@ -322,6 +325,15 @@ export default class DocxidianPlugin extends Plugin {
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_DOCX)) {
 			const view = leaf.view;
 			if (view instanceof DocxView) {
+				view.refreshSettings();
+			}
+		}
+	}
+
+	refreshPowerPointViews() {
+		for (const leaf of this.app.workspace.getLeavesOfType(NATIVE_POWERPOINT_VIEW_TYPE)) {
+			const view = leaf.view;
+			if (view instanceof NativePowerPointView) {
 				view.refreshSettings();
 			}
 		}

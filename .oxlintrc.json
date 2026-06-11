@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["import", "promise", "react", "unicorn", "typescript"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "rules": {
+    "no-new": "off",
+    "no-underscore-dangle": "off",
+    "react/react-in-jsx-scope": "off",
+    "react/no-did-update-set-state": "off",
+    "import/no-named-as-default": "off",
+    "promise/always-return": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-array-reverse": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "typescript/no-extraneous-class": "off",
+    "react-hooks/exhaustive-deps": "off"
+  }
+}
