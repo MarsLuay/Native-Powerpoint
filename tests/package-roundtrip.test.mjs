@@ -10,6 +10,21 @@ import { createRenderer, readDeck, toArrayBuffer } from "./helpers/renderer.mjs"
 
 const editableFixtures = ["features.pptx", "features.ppsx", "features.potx"];
 const macroFixtures = ["macro-view-only.pptm", "macro-view-only.ppsm", "macro-view-only.potm"];
+const fixtureTitleParagraph = '<a:p><a:r><a:rPr lang="en-US" sz="2800" b="1"/><a:t>Native PowerPoint fixture</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>';
+
+function paragraphXml(text, properties = 'lang="en-US" sz="2800" b="0"') {
+  return `<a:p><a:r><a:rPr ${properties}/><a:t>${text}</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>`;
+}
+
+async function createTitleParagraphFixture(paragraphs) {
+  const input = await readDeck("features.pptx");
+  const source = toArrayBuffer(input);
+  const sourceZip = await extractZip(source);
+  const slidePath = "ppt/slides/slide1.xml";
+  const slideXml = sourceZip.textFiles.get(slidePath);
+  assert.ok(slideXml);
+  return buildZip(source, new Map([[slidePath, slideXml.replace(fixtureTitleParagraph, paragraphs.join(""))]]));
+}
 
 test("pptx, ppsx, and potx fixtures load, render, export, and validate", async (t) => {
   const {
@@ -196,7 +211,7 @@ test("pasted and duplicated shapes receive fresh a16:creationId GUIDs", async ()
   assert.equal(guids.filter((guid) => guid === seedGuid).length, 1, "only the source shape keeps the seed GUID");
 });
 
-test("setRunStyleForRange bolds only the selected characters within a paragraph", async () => {
+test("setRunStyleForRange formats only the selected characters within a paragraph", async () => {
   const { PresentationEngine } = await loadPresentationEngineModule();
   const input = await readDeck("features.pptx");
   const engine = await PresentationEngine.load(toArrayBuffer(input));
@@ -204,43 +219,109 @@ test("setRunStyleForRange bolds only the selected characters within a paragraph"
   const shapeIndex = 0;
   const paragraphIndex = 0;
   await engine.updateParagraphText(0, shapeIndex, paragraphIndex, "Hello world");
-  await engine.setRunStyle(0, shapeIndex, { paragraphIndex, runIndex: 0 }, { bold: false });
-  await engine.setRunStyleForRange(0, shapeIndex, paragraphIndex, 6, 11, { bold: true });
+  await engine.setRunStyle(0, shapeIndex, { paragraphIndex, runIndex: 0 }, {
+    bold: false,
+    italic: false,
+    underline: false,
+    fontFamily: "Arial",
+    fontSizePt: 28,
+    color: null,
+    highlight: null
+  });
+  await engine.setRunStyleForRange(0, shapeIndex, paragraphIndex, 6, 11, {
+    bold: true,
+    italic: true,
+    underline: true,
+    fontFamily: "Georgia",
+    fontSizePt: 31,
+    color: "112233",
+    highlight: "FFEEDD"
+  });
 
-  assert.equal(engine.getRunStyle(0, shapeIndex, paragraphIndex, 0)?.bold, false);
-  assert.equal(engine.getRunStyle(0, shapeIndex, paragraphIndex, 0)?.fontSizePt, 28);
-  assert.equal(engine.getRunStyle(0, shapeIndex, paragraphIndex, 1)?.bold, true);
+  const beforeSelection = engine.getRunStyle(0, shapeIndex, paragraphIndex, 0);
+  const selected = engine.getRunStyle(0, shapeIndex, paragraphIndex, 1);
+  assert.equal(beforeSelection?.bold, false);
+  assert.equal(beforeSelection?.italic, false);
+  assert.equal(beforeSelection?.underline, false);
+  assert.equal(beforeSelection?.fontFamily, "Arial");
+  assert.equal(beforeSelection?.fontSizePt, 28);
+  assert.equal(beforeSelection?.color, null);
+  assert.equal(beforeSelection?.highlight, null);
+  assert.equal(selected?.bold, true);
+  assert.equal(selected?.italic, true);
+  assert.equal(selected?.underline, true);
+  assert.equal(selected?.fontFamily, "Georgia");
+  assert.equal(selected?.fontSizePt, 31);
+  assert.equal(selected?.color, "112233");
+  assert.equal(selected?.highlight, "FFEEDD");
   assert.equal(engine.isRangeStyled(0, shapeIndex, paragraphIndex, 6, 11, "bold"), true);
   assert.equal(engine.isRangeStyled(0, shapeIndex, paragraphIndex, 0, 5, "bold"), false);
 });
 
-test("setRunStyleForRanges applies partial formatting across paragraphs", async () => {
+test("setRunStyleForRanges applies every run style across paragraph selections", async () => {
   const { PresentationEngine } = await loadPresentationEngineModule();
-  const input = await readDeck("features.pptx");
-  const source = toArrayBuffer(input);
-  const sourceZip = await extractZip(source);
-  const slidePath = "ppt/slides/slide1.xml";
-  const slideXml = sourceZip.textFiles.get(slidePath);
-  assert.ok(slideXml);
-
-  const titleParagraph = '<a:p><a:r><a:rPr lang="en-US" sz="2800" b="1"/><a:t>Native PowerPoint fixture</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>';
-  const twoParagraphs =
-    '<a:p><a:r><a:rPr lang="en-US" sz="2800" b="0"/><a:t>Alpha beta</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>' +
-    '<a:p><a:r><a:rPr lang="en-US" sz="2800" b="0"/><a:t>Gamma delta</a:t></a:r><a:endParaRPr lang="en-US"/></a:p>';
-  const patched = await buildZip(source, new Map([[slidePath, slideXml.replace(titleParagraph, twoParagraphs)]]));
+  const patched = await createTitleParagraphFixture([
+    paragraphXml("Alpha beta"),
+    paragraphXml("Gamma delta")
+  ]);
   const engine = await PresentationEngine.load(patched);
 
   const ranges = [
     { paragraphIndex: 0, start: 6, end: 10 },
     { paragraphIndex: 1, start: 0, end: 5 }
   ];
-  await engine.setRunStyleForRanges(0, 0, ranges, { bold: true });
+  await engine.setRunStyleForRanges(0, 0, ranges, {
+    bold: true,
+    italic: true,
+    underline: true,
+    fontFamily: "Georgia",
+    fontSizePt: 31,
+    color: "112233",
+    highlight: "FFEEDD"
+  });
 
   assert.equal(engine.areRangesStyled(0, 0, ranges, "bold"), true);
   assert.equal(engine.isRangeStyled(0, 0, 0, 0, 5, "bold"), false);
   assert.equal(engine.isRangeStyled(0, 0, 1, 6, 11, "bold"), false);
-  assert.equal(engine.getRunStyle(0, 0, 0, 1)?.bold, true);
-  assert.equal(engine.getRunStyle(0, 0, 1, 0)?.bold, true);
+  for (const [paragraphIndex, runIndex] of [[0, 1], [1, 0]]) {
+    const style = engine.getRunStyle(0, 0, paragraphIndex, runIndex);
+    assert.equal(style?.bold, true);
+    assert.equal(style?.italic, true);
+    assert.equal(style?.underline, true);
+    assert.equal(style?.fontFamily, "Georgia");
+    assert.equal(style?.fontSizePt, 31);
+    assert.equal(style?.color, "112233");
+    assert.equal(style?.highlight, "FFEEDD");
+  }
+  for (const [paragraphIndex, runIndex] of [[0, 0], [1, 1]]) {
+    const style = engine.getRunStyle(0, 0, paragraphIndex, runIndex);
+    assert.equal(style?.bold, false);
+    assert.equal(style?.italic, false);
+    assert.equal(style?.underline, false);
+    assert.equal(style?.fontFamily, null);
+    assert.equal(style?.fontSizePt, 28);
+    assert.equal(style?.color, null);
+    assert.equal(style?.highlight, null);
+  }
+});
+
+test("setParagraphAlignmentForRanges aligns only selected paragraphs", async () => {
+  const { PresentationEngine } = await loadPresentationEngineModule();
+  const patched = await createTitleParagraphFixture([
+    paragraphXml("Alpha beta"),
+    paragraphXml("Gamma delta"),
+    paragraphXml("Plain ending")
+  ]);
+  const engine = await PresentationEngine.load(patched);
+
+  await engine.setParagraphAlignmentForRanges(0, 0, [
+    { paragraphIndex: 0, start: 6, end: 10 },
+    { paragraphIndex: 1, start: 0, end: 5 }
+  ], "ctr");
+
+  assert.equal(engine.getRunStyle(0, 0, 0, 0)?.alignment, "ctr");
+  assert.equal(engine.getRunStyle(0, 0, 1, 0)?.alignment, "ctr");
+  assert.equal(engine.getRunStyle(0, 0, 2, 0)?.alignment, null);
 });
 
 test("updateParagraphText preserves line breaks within a paragraph", async () => {

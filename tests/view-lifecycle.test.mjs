@@ -98,6 +98,58 @@ test("rapid edits debounce to one autosave", async () => {
   }
 });
 
+test("focusable toolbar controls preserve the active text formatting selection", async () => {
+  const { NativePowerPointView } = await loadNativePowerPointViewModule();
+  const { view } = createHarness(NativePowerPointView);
+  const snapshot = {
+    shapeIndex: 4,
+    run: { paragraphIndex: 1, runIndex: 2 },
+    ranges: [{ paragraphIndex: 1, start: 3, end: 8 }],
+    anchor: { left: 1, top: 2, width: 3, height: 4 },
+  };
+
+  view.captureToolbarFormattingSnapshot = () => snapshot;
+  view.flushActiveEditor = () => {
+    view.toolbarFormattingSnapshot = null;
+  };
+
+  view.flushActiveEditorForToolbarInput();
+
+  assert.deepEqual(view.toolbarFormattingSnapshot, snapshot);
+});
+
+test("alignment applies to every paragraph touched by a text selection", async () => {
+  const { NativePowerPointView } = await loadNativePowerPointViewModule();
+  const { view } = createHarness(NativePowerPointView);
+  const ranges = [
+    { paragraphIndex: 0, start: 2, end: 7 },
+    { paragraphIndex: 1, start: 0, end: 4 },
+  ];
+  let rangeAlignmentCall = null;
+  let wholeParagraphCall = null;
+
+  view.engine = {
+    setParagraphAlignment(...args) {
+      wholeParagraphCall = args;
+      return Promise.resolve();
+    },
+    setParagraphAlignmentForRanges(...args) {
+      rangeAlignmentCall = args;
+      return Promise.resolve();
+    },
+  };
+  view.currentSlide = 3;
+  view.runTextFormatting = async (_label, apply) => {
+    await apply(5, { paragraphIndex: 0, runIndex: 0 }, ranges);
+  };
+
+  view.applyAlignment("ctr");
+  await Promise.resolve();
+
+  assert.equal(wholeParagraphCall, null);
+  assert.deepEqual(rangeAlignmentCall, [3, 5, ranges, "ctr"]);
+});
+
 test("queued saves serialize rapid writes and retain the final edit", async () => {
   const { NativePowerPointView } = await loadNativePowerPointViewModule();
   const { modified, sourcePackage, view } = createHarness(NativePowerPointView, { autosaveEnabled: false });

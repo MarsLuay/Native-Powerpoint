@@ -2177,6 +2177,35 @@ export class PresentationEngine {
     });
   }
 
+  /** Set paragraph alignment on the paragraphs touched by the selected ranges. */
+  async setParagraphAlignmentForRanges(
+    slideIndex: number,
+    shapeIndex: number,
+    ranges: ParagraphTextRange[],
+    align: ParagraphAlignment
+  ): Promise<void> {
+    const paragraphIndices = new Set(
+      ranges
+        .map((range) => range.paragraphIndex)
+        .filter((paragraphIndex) => Number.isFinite(paragraphIndex))
+    );
+    if (paragraphIndices.size === 0) return;
+
+    await this.editSlideShape(slideIndex, shapeIndex, (shape, slideDoc) => {
+      const paragraphs = getDrawingParagraphs(shape);
+      let changed = false;
+      for (const paragraphIndex of paragraphIndices) {
+        const paragraph = paragraphs[paragraphIndex];
+        if (!paragraph) {
+          throw new Error('Could not find the selected text paragraph.');
+        }
+        getParagraphProperties(paragraph, slideDoc).setAttribute('algn', align);
+        changed = true;
+      }
+      return changed;
+    });
+  }
+
   private async editSlideShape(
     slideIndex: number,
     shapeIndex: number,

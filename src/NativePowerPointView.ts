@@ -215,6 +215,10 @@ interface InlineRangeSelection {
   ranges: ParagraphTextRange[];
 }
 
+interface ToolbarFormattingSnapshot extends TextStyleContext {
+  ranges: ParagraphTextRange[] | null;
+}
+
 const TEXT_TOOLBAR_FONTS = [
   'Arial',
   'Calibri',
@@ -542,6 +546,7 @@ export class NativePowerPointView extends FileView {
   private textHighlightValue = 'FFFF00';
   private activeToolbarPopover: HTMLElement | null = null;
   private toolbarPopoverCleanup: (() => void) | null = null;
+  private toolbarFormattingSnapshot: ToolbarFormattingSnapshot | null = null;
   private presentController: PowerPointPresentController | null = null;
   private thumbnailDragIndex: number | null = null;
 
@@ -4267,6 +4272,7 @@ export class NativePowerPointView extends FileView {
     if (!options.skipTextCommit) {
       this.commitActiveTextEditing();
     }
+    this.toolbarFormattingSnapshot = null;
     this.selectedShapeIndex = null;
     this.selectedShapeIndices.clear();
     this.selectedTransform = null;
@@ -5393,6 +5399,15 @@ export class NativePowerPointView extends FileView {
       };
     }
 
+    if (this.toolbarFormattingSnapshot) {
+      const anchor = this.getSelectedBox() ?? this.toolbarFormattingSnapshot.anchor;
+      return {
+        shapeIndex: this.toolbarFormattingSnapshot.shapeIndex,
+        run: this.toolbarFormattingSnapshot.run,
+        anchor
+      };
+    }
+
     // Keep the formatting toolbar visible while a single text shape is selected,
     // even when no inline editor is active (e.g. after the editor is flushed
     // because the user clicked into the toolbar's font-size box).
@@ -5464,7 +5479,7 @@ export class NativePowerPointView extends FileView {
     };
   }
 
-  private getActiveInlineSelectionRanges(shapeIndex: number): ParagraphTextRange[] | null {
+  private getStoredInlineSelectionRanges(shapeIndex: number): ParagraphTextRange[] | null {
     if (this.inlineRangeSelection?.shapeIndex === shapeIndex && this.inlineRangeSelection.ranges.length > 0) {
       return this.inlineRangeSelection.ranges;
     }
@@ -5475,6 +5490,36 @@ export class NativePowerPointView extends FileView {
     }
 
     return null;
+  }
+
+  private getActiveInlineSelectionRanges(shapeIndex: number): ParagraphTextRange[] | null {
+    return this.getStoredInlineSelectionRanges(shapeIndex)
+      ?? (this.toolbarFormattingSnapshot?.shapeIndex === shapeIndex ? this.toolbarFormattingSnapshot.ranges : null);
+  }
+
+  private captureToolbarFormattingSnapshot(): ToolbarFormattingSnapshot | null {
+    const context = this.getTextStyleContext();
+    if (!context) return null;
+
+    let ranges = this.getStoredInlineSelectionRanges(context.shapeIndex);
+    if (!ranges && this.toolbarFormattingSnapshot?.shapeIndex === context.shapeIndex) {
+      ranges = this.toolbarFormattingSnapshot.ranges;
+    }
+    const editor = this.activeEditor;
+    const target = this.activeTextStyleTarget;
+    if (!ranges && editor && target && target.shapeIndex === context.shapeIndex) {
+      const start = Math.min(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
+      const end = Math.max(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
+      ranges = [{ paragraphIndex: target.paragraphIndex, start, end }];
+    }
+
+    return { ...context, ranges };
+  }
+
+  private flushActiveEditorForToolbarInput(): void {
+    const snapshot = this.captureToolbarFormattingSnapshot();
+    this.flushActiveEditor();
+    this.toolbarFormattingSnapshot = snapshot;
   }
 
   private updateTextToolbar(): void {
@@ -5686,7 +5731,8 @@ export class NativePowerPointView extends FileView {
         max: String(TEXT_TOOLBAR_MAX_FONT_SIZE)
       }
     });
-    fontSizeInput.addEventListener('pointerdown', () => this.flushActiveEditor(), true);
+    fontSizeInput.addEventListener('pointerdown', () => this.flushActiveEditorForToolbarInput(), true);
+    fontSizeInput.addEventListener('focus', () => this.flushActiveEditorForToolbarInput());
     fontSizeInput.addEventListener('change', () => this.commitFontSizeInput());
     fontSizeInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
@@ -5841,8 +5887,12 @@ export class NativePowerPointView extends FileView {
   private applyAlignment(align: ParagraphAlignment): void {
     const engine = this.engine;
     if (!engine) return;
-    void this.runTextFormatting('Align text', (shapeIndex, run, _selection) =>
-      engine.setParagraphAlignment(this.currentSlide, shapeIndex, run ? run.paragraphIndex : null, align));
+    void this.runTextFormatting('Align text', (shapeIndex, run, selection) => {
+      if (selection?.length) {
+        return engine.setParagraphAlignmentForRanges(this.currentSlide, shapeIndex, selection, align);
+      }
+      return engine.setParagraphAlignment(this.currentSlide, shapeIndex, run ? run.paragraphIndex : null, align);
+    });
   }
 
   private async runTextFormatting(
@@ -5858,6 +5908,7 @@ export class NativePowerPointView extends FileView {
 
     const context = this.getTextStyleContext();
     if (!context) return;
+    const usedToolbarFormattingSnapshot = this.toolbarFormattingSnapshot !== null;
 
     // Capture the live inline-editor selection up front. The textarea itself
     // lives in the canvas pane (not the slide SVG), so it survives a slide
@@ -5911,6 +5962,10 @@ export class NativePowerPointView extends FileView {
       }
     } catch (error) {
       new Notice(`Could not format text: ${cleanError(error)}`);
+    } finally {
+      if (usedToolbarFormattingSnapshot) {
+        this.toolbarFormattingSnapshot = null;
+      }
     }
   }
 
@@ -6032,7 +6087,8 @@ export class NativePowerPointView extends FileView {
         attr: { 'aria-label': 'Custom color', value: `#${currentColor}` }
       });
       customInput.value = `#${currentColor}`;
-      customInput.addEventListener('pointerdown', () => this.flushActiveEditor(), true);
+      customInput.addEventListener('pointerdown', () => this.flushActiveEditorForToolbarInput(), true);
+      customInput.addEventListener('focus', () => this.flushActiveEditorForToolbarInput());
       customInput.addEventListener('change', () => {
         const picked = customInput.value.replace(/^#/, '').toUpperCase();
         this.closeToolbarPopover();
@@ -6413,6 +6469,7 @@ export class NativePowerPointView extends FileView {
     this.inlineWholeShapeSelection = null;
     this.inlineWholeShapeSelected = false;
     this.inlineRangeSelection = null;
+    this.toolbarFormattingSnapshot = null;
   }
 
   private removeInlineSelection(): void {
