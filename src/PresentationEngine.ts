@@ -47,6 +47,37 @@ export type InsertableShapeGeometry =
 
 export type SlideLayoutKind = 'blank' | 'title' | 'titleBody';
 
+/** Renderer augmented with the build-time `initJsBackend` patch (see esbuild.config.mjs). */
+interface JsBackendCapableRenderer {
+  initJsBackend(engine: unknown): void;
+}
+
+/**
+ * True when a failure from the Wasm renderer indicates the runtime lacks
+ * WebAssembly GC (Obsidian installer < 1.5.8 / Chromium < 119). Mirrors the
+ * detection in NativePowerPointView so both layers agree.
+ */
+function isWasmGcUnsupportedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /WebAssembly GC support|Wasm init failed/i.test(message);
+}
+
+/**
+ * Initialize the renderer's backend. Prefers the fast Wasm (wasm-gc) engine and,
+ * if the runtime cannot run it, lazily loads the pure-JS engine fallback so PPTX
+ * files still open on older Obsidian installers. The fallback module is only
+ * fetched/evaluated when actually needed.
+ */
+async function initRendererBackend(renderer: PptxRenderer): Promise<void> {
+  try {
+    await renderer.init(wasmBytes);
+  } catch (error) {
+    if (!isWasmGcUnsupportedError(error)) throw error;
+    const { createPptxJsEngine } = await import('./vendor/pptx-js-engine.mjs');
+    (renderer as unknown as JsBackendCapableRenderer).initJsBackend(createPptxJsEngine());
+  }
+}
+
 function assertOk(result: string, fallback: string): void {
   if (result.startsWith('ERROR:')) {
     throw new Error(result.slice('ERROR:'.length).trim() || fallback);
@@ -1624,7 +1655,7 @@ export class PresentationEngine {
       measureText: (text, fontFace, fontSizePx) => fontFidelity.measureText(text, fontFace, fontSizePx)
     });
 
-    await renderer.init(wasmBytes);
+    await initRendererBackend(renderer);
     const { slideCount } = await renderer.loadPptx(buffer);
     return { renderer, fontFidelity, slideCount };
   }

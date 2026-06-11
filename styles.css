@@ -3021,6 +3021,45 @@ body .native-powerpoint-light-surface.native-powerpoint-light-surface .native-po
 	color: var(--text-error);
 }
 
+.native-powerpoint-runtime-error {
+	color: var(--text-normal);
+	line-height: 1.55;
+	margin: 48px auto;
+	max-width: 560px;
+	padding: 0 24px;
+	text-align: center;
+}
+
+.native-powerpoint-runtime-error-title {
+	color: var(--text-error);
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-bold);
+	margin-bottom: 12px;
+}
+
+.native-powerpoint-runtime-error-actions {
+	margin: 18px 0;
+}
+
+.native-powerpoint-runtime-error-link {
+	background-color: var(--interactive-accent);
+	border-radius: var(--radius-s);
+	color: var(--text-on-accent);
+	display: inline-block;
+	font-weight: var(--font-medium);
+	padding: 8px 16px;
+	text-decoration: none;
+}
+
+.native-powerpoint-runtime-error-link:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.native-powerpoint-runtime-error-hint {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
 .native-powerpoint-security-warning {
 	color: var(--text-normal);
 	margin: 48px auto;

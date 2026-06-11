@@ -59,10 +59,39 @@ const inlinePptxSvgWasmPlugin = {
 			}
 
 			const source = await readFile(args.path, "utf8");
-			const contents = source.replace(
+
+			let contents = source.replace(
 				"const DEFAULT_WASM_URL = new URL('./main.wasm', import.meta.url).href;",
 				"const DEFAULT_WASM_URL = undefined;"
 			);
+
+			// Teach PptxRenderer to run on the pure-JS engine fallback (used when the
+			// runtime lacks WebAssembly GC). `initJsBackend` reuses the existing host
+			// FFI (buildImportObject) and stores the JS engine exports where the Wasm
+			// instance normally lives, so every `this.exports.*` call works unchanged.
+			// The `exports` getter re-publishes this instance's FFI on `globalThis`
+			// before each (synchronous) call, keeping multiple open presentations
+			// isolated from one another.
+			const getterAnchor = "    get exports() {\n        if (!this.wasm)";
+			if (!contents.includes(getterAnchor)) {
+				throw new Error(
+					"[inline-pptx-svg-wasm] could not find the `exports` getter to patch — " +
+					"pptx-svg internals changed; update esbuild.config.mjs."
+				);
+			}
+			contents = contents.replace(
+				getterAnchor,
+				"    initJsBackend(engine) {\n" +
+				"        this.__jsFfi = this.buildImportObject().pptx_ffi;\n" +
+				"        this.wasm = { exports: engine };\n" +
+				"        globalThis.pptx_ffi = this.__jsFfi;\n" +
+				"    }\n" +
+				"    get exports() {\n" +
+				"        if (this.__jsFfi)\n" +
+				"            globalThis.pptx_ffi = this.__jsFfi;\n" +
+				"        if (!this.wasm)"
+			);
+
 			return { contents, loader: "js" };
 		});
 	}
@@ -93,6 +122,10 @@ const context = await esbuild.context({
 		...builtinModules],
 	format: "cjs",
 	target: "es2018",
+	// The pure-JS PPTX engine fallback (src/vendor/pptx-js-engine.mjs) uses BigInt
+	// literals. It only runs on Chromium that lacks WebAssembly GC (≈111–118), all
+	// of which support BigInt natively (Chrome 67+), so don't down-level or warn.
+	supported: { bigint: true },
 	alias: {
 		"@eigenpal/docx-editor-i18n/en": "./node_modules/@eigenpal/docx-editor-i18n/dist/en.mjs",
 		"@eigenpal/docx-editor-i18n/he": "./node_modules/@eigenpal/docx-editor-i18n/dist/he.mjs",

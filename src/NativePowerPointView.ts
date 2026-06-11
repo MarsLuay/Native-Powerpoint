@@ -273,6 +273,30 @@ function cleanError(error: unknown): string {
   return error instanceof Error ? error.message : String(error || 'Unknown error');
 }
 
+const OBSIDIAN_DOWNLOAD_URL = 'https://obsidian.md/download';
+
+/**
+ * The PPTX renderer is a MoonBit module compiled to the WebAssembly GC target,
+ * which Chromium only enables by default from version 119 (the engine bundled
+ * with Obsidian's installer, not the in-app app version). Older installers fail
+ * every instantiation tier in `pptx-svg`, surfacing a raw "Wasm init failed —
+ * requires WebAssembly GC support" error. DOCX uses a pure-JS path and is
+ * unaffected, so we translate this specific failure into actionable guidance.
+ */
+function isWasmGcUnsupportedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /WebAssembly GC support|Wasm init failed/i.test(message);
+}
+
+function getChromiumVersion(): string | null {
+  try {
+    const versions = (globalThis as { process?: { versions?: { chrome?: string } } }).process?.versions;
+    return versions?.chrome ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function cloneTransform(transform: ShapeTransform): ShapeTransform {
   return {
     x: transform.x,
@@ -3163,7 +3187,11 @@ export class NativePowerPointView extends FileView {
         new Notice(`Opened ${file.name} view-only: ${this.viewOnlyReason}`);
       }
     } catch (error) {
-      this.showError(`Could not open ${file.name}: ${cleanError(error)}`);
+      if (isWasmGcUnsupportedError(error)) {
+        this.showRuntimeUnsupportedError(file);
+      } else {
+        this.showError(`Could not open ${file.name}: ${cleanError(error)}`);
+      }
     } finally {
       this.isLoading = false;
       this.updateSlideCounter();
@@ -3199,6 +3227,43 @@ export class NativePowerPointView extends FileView {
     this.slideSurface.empty();
     this.slideSurface.createDiv({ cls: 'native-powerpoint-error', text: message });
     this.thumbnailContainer?.empty();
+    this.setSaveState('failed');
+    this.updateEditingAvailability();
+  }
+
+  private showRuntimeUnsupportedError(file: TFile): void {
+    if (!this.slideSurface) return;
+    this.resetSlideSurfaceSizing();
+    this.slideSurface.empty();
+    this.thumbnailContainer?.empty();
+
+    const chromeVersion = getChromiumVersion();
+    const notice = this.slideSurface.createDiv({ cls: 'native-powerpoint-runtime-error' });
+    notice.createDiv({
+      cls: 'native-powerpoint-runtime-error-title',
+      text: 'Update Obsidian to open PowerPoint files'
+    });
+    notice.createEl('p', {
+      text: `Rendering ${file.name} needs Obsidian's bundled browser engine (Chromium) to support WebAssembly GC, which is only available in Chromium 119 or newer.${
+        chromeVersion ? ` This vault is currently running Chromium ${chromeVersion}.` : ''
+      }`
+    });
+    notice.createEl('p', {
+      text: 'The in-app updater does not upgrade this engine. Download the latest installer and reinstall over your current copy — your vault and settings are preserved.'
+    });
+
+    const actions = notice.createDiv({ cls: 'native-powerpoint-runtime-error-actions' });
+    actions.createEl('a', {
+      cls: 'native-powerpoint-runtime-error-link',
+      text: 'Download the latest Obsidian',
+      href: OBSIDIAN_DOWNLOAD_URL
+    });
+
+    notice.createEl('p', {
+      cls: 'native-powerpoint-runtime-error-hint',
+      text: 'After reinstalling, check Settings → About: the "Installer version" should match the latest release. DOCX files are unaffected and work on older versions.'
+    });
+
     this.setSaveState('failed');
     this.updateEditingAvailability();
   }
