@@ -204,6 +204,69 @@ function getShapeBox(shape: Element): ShapeBox | null {
   };
 }
 
+function getShapeTreeElement(slideDoc: XMLDocument): Element {
+  const shapeTree = getDescendants(slideDoc, 'spTree')[0];
+  if (!shapeTree) {
+    throw new Error('Could not find the slide shape tree.');
+  }
+  return shapeTree;
+}
+
+/** Resolve a pptx-svg renderer composite shape index to its OOXML element. */
+function getShapeElementByRendererIndex(slideDoc: XMLDocument, shapeIndex: number): Element {
+  const shapes = getSpTreeShapes(getShapeTreeElement(slideDoc));
+  if (shapeIndex < 1000) {
+    const shape = shapes[shapeIndex];
+    if (!shape) {
+      throw new Error(`Could not find slide object ${shapeIndex + 1}.`);
+    }
+    return shape;
+  }
+
+  const groupIndex = Math.floor(shapeIndex / 1000);
+  const childIndex = shapeIndex % 1000;
+  const group = shapes[groupIndex];
+  if (!group || group.localName !== 'grpSp') {
+    throw new Error(`Could not find slide object ${shapeIndex + 1}.`);
+  }
+
+  const children = getElementChildren(group).filter((element) =>
+    SHAPE_ELEMENT_NAMES.has(element.localName)
+  );
+  const child = children[childIndex];
+  if (!child) {
+    throw new Error(`Could not find slide object ${shapeIndex + 1}.`);
+  }
+  return child;
+}
+
+function applyTransformToShape(shape: Element, transform: ShapeTransform): boolean {
+  const xfrm = getDescendants(shape, 'xfrm')[0];
+  if (!xfrm) return false;
+
+  let offset = getElementChildren(xfrm).find(
+    (element) => element.localName === 'off' && element.namespaceURI === DRAWINGML_NAMESPACE
+  );
+  let extent = getElementChildren(xfrm).find(
+    (element) => element.localName === 'ext' && element.namespaceURI === DRAWINGML_NAMESPACE
+  );
+  if (!offset) {
+    offset = shape.ownerDocument.createElementNS(DRAWINGML_NAMESPACE, 'a:off');
+    xfrm.insertBefore(offset, xfrm.firstChild);
+  }
+  if (!extent) {
+    extent = shape.ownerDocument.createElementNS(DRAWINGML_NAMESPACE, 'a:ext');
+    xfrm.appendChild(extent);
+  }
+
+  offset.setAttribute('x', String(Math.round(transform.x)));
+  offset.setAttribute('y', String(Math.round(transform.y)));
+  extent.setAttribute('cx', String(Math.max(1, Math.round(transform.cx))));
+  extent.setAttribute('cy', String(Math.max(1, Math.round(transform.cy))));
+  xfrm.setAttribute('rot', String(Math.round(transform.rot)));
+  return true;
+}
+
 function nextShapeId(slideDoc: XMLDocument): number {
   let maxId = 1;
   for (const cNvPr of getDescendants(slideDoc, 'cNvPr')) {
@@ -252,6 +315,25 @@ function getDrawingParagraphs(container: Element): Element[] {
     .filter((element) => element.localName === 'p' && element.namespaceURI === DRAWINGML_NAMESPACE);
 }
 
+function clearDrawingParagraphContent(paragraph: Element): Element | null {
+  let templateRun: Element | null = null;
+  for (const child of [...getElementChildren(paragraph)]) {
+    if (child.localName === 'pPr' && child.namespaceURI === DRAWINGML_NAMESPACE) continue;
+    if (child.localName === 'r' && child.namespaceURI === DRAWINGML_NAMESPACE && !templateRun) {
+      templateRun = child;
+    }
+    paragraph.removeChild(child);
+  }
+  return templateRun;
+}
+
+function appendDrawingParagraphRun(paragraph: Element, templateRun: Element | null, text: string): void {
+  const doc = paragraph.ownerDocument;
+  const run = templateRun ? cloneDrawingRun(templateRun, doc) : doc.createElementNS(DRAWINGML_NAMESPACE, 'a:r');
+  setDrawingRunText(run, text);
+  paragraph.appendChild(run);
+}
+
 function setDrawingParagraphText(container: Element, paragraphIndex: number, text: string): void {
   const paragraphs = getDrawingParagraphs(container);
   const paragraph = paragraphs[paragraphIndex];
@@ -259,20 +341,26 @@ function setDrawingParagraphText(container: Element, paragraphIndex: number, tex
     throw new Error('Could not find the selected text paragraph.');
   }
 
-  const runs = getElementChildren(paragraph)
-    .filter((element) => element.localName === 'r' && element.namespaceURI === DRAWINGML_NAMESPACE);
-  if (runs.length === 0) {
-    throw new Error('Could not find the selected text paragraph runs.');
+  if (!text.includes('\n')) {
+    const runs = getDrawingRuns(paragraph);
+    if (runs.length === 0) {
+      throw new Error('Could not find the selected text paragraph runs.');
+    }
+
+    runs.forEach((run, runIndex) => {
+      setDrawingRunText(run, runIndex === 0 ? text : '');
+    });
+    return;
   }
 
-  runs.forEach((run, runIndex) => {
-    const textElement = getElementChildren(run)
-      .find((element) => element.localName === 't' && element.namespaceURI === DRAWINGML_NAMESPACE)
-      ?? getDescendants(run, 't').find((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
-    if (!textElement) {
-      throw new Error('Could not find the selected text node.');
+  const doc = paragraph.ownerDocument;
+  const templateRun = clearDrawingParagraphContent(paragraph);
+  const lines = text.split('\n');
+  lines.forEach((line, lineIndex) => {
+    if (lineIndex > 0) {
+      paragraph.appendChild(doc.createElementNS(DRAWINGML_NAMESPACE, 'a:br'));
     }
-    textElement.textContent = runIndex === 0 ? text : '';
+    appendDrawingParagraphRun(paragraph, templateRun, line);
   });
 }
 
@@ -298,6 +386,160 @@ function setDrawingTextRun(container: Element, paragraphIndex: number, runIndex:
   }
 
   textElement.textContent = text;
+}
+
+function getDrawingRunText(run: Element): string {
+  const textElement = getElementChildren(run)
+    .find((element) => element.localName === 't' && element.namespaceURI === DRAWINGML_NAMESPACE)
+    ?? getDescendants(run, 't').find((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
+  return textElement?.textContent ?? '';
+}
+
+function setDrawingRunText(run: Element, text: string): void {
+  const textElement = getElementChildren(run)
+    .find((element) => element.localName === 't' && element.namespaceURI === DRAWINGML_NAMESPACE)
+    ?? getDescendants(run, 't').find((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
+  if (!textElement) {
+    throw new Error('Could not find the selected text node.');
+  }
+  textElement.textContent = text;
+}
+
+function cloneDrawingRun(run: Element, doc: XMLDocument): Element {
+  return run.cloneNode(true) as Element;
+}
+
+interface DrawingRunSegment {
+  run: Element;
+  runIndex: number;
+  start: number;
+  end: number;
+  text: string;
+}
+
+function getDrawingRunSegments(paragraph: Element): DrawingRunSegment[] {
+  const segments: DrawingRunSegment[] = [];
+  let offset = 0;
+  getDrawingRuns(paragraph).forEach((run, runIndex) => {
+    const text = getDrawingRunText(run);
+    segments.push({ run, runIndex, start: offset, end: offset + text.length, text });
+    offset += text.length;
+  });
+  return segments;
+}
+
+function splitDrawingRunAt(
+  paragraph: Element,
+  runIndex: number,
+  localOffset: number,
+  doc: XMLDocument
+): void {
+  const runs = getDrawingRuns(paragraph);
+  const run = runs[runIndex];
+  if (!run) return;
+
+  const text = getDrawingRunText(run);
+  if (localOffset <= 0 || localOffset >= text.length) return;
+
+  setDrawingRunText(run, text.slice(0, localOffset));
+  const afterRun = cloneDrawingRun(run, doc);
+  setDrawingRunText(afterRun, text.slice(localOffset));
+
+  const next = run.nextSibling;
+  if (next) {
+    paragraph.insertBefore(afterRun, next);
+  } else {
+    paragraph.appendChild(afterRun);
+  }
+}
+
+function splitParagraphAtOffset(paragraph: Element, offset: number, doc: XMLDocument): void {
+  if (offset <= 0) return;
+
+  const segments = getDrawingRunSegments(paragraph);
+  const total = segments.at(-1)?.end ?? 0;
+  if (offset >= total) return;
+
+  for (const segment of segments) {
+    if (offset > segment.start && offset < segment.end) {
+      splitDrawingRunAt(paragraph, segment.runIndex, offset - segment.start, doc);
+      return;
+    }
+  }
+}
+
+function applyRunStyleToParagraphRange(
+  paragraph: Element,
+  doc: XMLDocument,
+  startOffset: number,
+  endOffset: number,
+  change: RunStyleChange
+): boolean {
+  let start = Math.max(0, startOffset);
+  let end = Math.max(0, endOffset);
+  if (start > end) {
+    [start, end] = [end, start];
+  }
+
+  if (start === end) {
+    const segments = getDrawingRunSegments(paragraph);
+    const total = segments.at(-1)?.end ?? 0;
+    const position = Math.min(start, total);
+    const segment = segments.find((candidate) => position >= candidate.start && position <= candidate.end)
+      ?? segments.at(-1);
+    if (!segment || segment.text.length === 0) return false;
+    applyRunPropertyChange(getRunProperties(segment.run, doc), doc, change);
+    return true;
+  }
+
+  splitParagraphAtOffset(paragraph, start, doc);
+  splitParagraphAtOffset(paragraph, end, doc);
+
+  let changed = false;
+  for (const segment of getDrawingRunSegments(paragraph)) {
+    if (segment.end <= start || segment.start >= end) continue;
+    if (segment.text.length === 0) continue;
+    applyRunPropertyChange(getRunProperties(segment.run, doc), doc, change);
+    changed = true;
+  }
+  return changed;
+}
+
+function isParagraphRangeStyled(
+  paragraph: Element,
+  startOffset: number,
+  endOffset: number,
+  flag: 'bold' | 'italic' | 'underline'
+): boolean {
+  let start = Math.max(0, startOffset);
+  let end = Math.max(0, endOffset);
+  if (start > end) {
+    [start, end] = [end, start];
+  }
+  if (start === end) return false;
+
+  let matched = false;
+  for (const segment of getDrawingRunSegments(paragraph)) {
+    if (segment.end <= start || segment.start >= end) continue;
+    if (segment.text.length === 0) continue;
+    matched = true;
+
+    const runProperties = getElementChildren(segment.run)
+      .find((element) => element.localName === 'rPr' && element.namespaceURI === DRAWINGML_NAMESPACE);
+    if (!runProperties) return false;
+
+    if (flag === 'bold') {
+      const bold = runProperties.getAttribute('b');
+      if (bold !== '1' && bold !== 'true') return false;
+    } else if (flag === 'italic') {
+      const italic = runProperties.getAttribute('i');
+      if (italic !== '1' && italic !== 'true') return false;
+    } else {
+      const underline = runProperties.getAttribute('u');
+      if (!underline || underline === 'none') return false;
+    }
+  }
+  return matched;
 }
 
 /**
@@ -381,6 +623,31 @@ function getShapeRunPositions(shape: Element): DrawingRunPosition[] {
     });
   });
   return positions;
+}
+
+/**
+ * Disable shrink-to-fit ("normAutofit") on every text body in the shape. The
+ * SVG renderer recomputes normAutofit dynamically and ignores the stored
+ * fontScale, so when a user explicitly sets a font size the only way to honor
+ * it is to turn the shrinking autofit off. normAutofit is replaced with
+ * noAutofit; spAutoFit (resize shape to text) already honors the size and is
+ * left intact.
+ */
+function disableShrinkAutofit(shape: Element, doc: XMLDocument): boolean {
+  const bodyProps = getDescendants(shape, 'bodyPr')
+    .filter((element) => element.namespaceURI === DRAWINGML_NAMESPACE);
+
+  let changed = false;
+  for (const bodyPr of bodyProps) {
+    const normAutofit = getElementChildren(bodyPr)
+      .find((element) => element.localName === 'normAutofit' && element.namespaceURI === DRAWINGML_NAMESPACE);
+    if (!normAutofit) continue;
+
+    const noAutofit = doc.createElementNS(DRAWINGML_NAMESPACE, 'a:noAutofit');
+    bodyPr.replaceChild(noAutofit, normAutofit);
+    changed = true;
+  }
+  return changed;
 }
 
 function getRunProperties(run: Element, doc: XMLDocument): Element {
@@ -1475,7 +1742,11 @@ export class PresentationEngine {
     return degreesToOoxml(value);
   }
 
-  updateShapeTransform(slideIndex: number, shapeIndex: number, transform: ShapeTransform): void {
+  async updateShapeTransform(
+    slideIndex: number,
+    shapeIndex: number,
+    transform: ShapeTransform
+  ): Promise<void> {
     const result = this.renderer.updateShapeTransform(
       slideIndex,
       shapeIndex,
@@ -1485,7 +1756,39 @@ export class PresentationEngine {
       Math.max(1, Math.round(transform.cy)),
       Math.round(transform.rot)
     );
-    assertOk(result, 'Could not update shape transform.');
+    if (!result.startsWith('ERROR:')) {
+      return;
+    }
+
+    const message = result.slice('ERROR:'.length).trim().toLowerCase();
+    if (!message.includes('out of range')) {
+      assertOk(result, 'Could not update shape transform.');
+    }
+
+    await this.updateShapeTransformInOoxml(slideIndex, shapeIndex, transform);
+  }
+
+  private async updateShapeTransformInOoxml(
+    slideIndex: number,
+    shapeIndex: number,
+    transform: ShapeTransform
+  ): Promise<void> {
+    const rawExport = await this.exportRendererState();
+    const slidePath = getSlidePath(slideIndex);
+    const zip = await extractZip(rawExport);
+    const slideXml = zip.textFiles.get(slidePath);
+    if (!slideXml) {
+      throw new Error(`Missing slide XML part: ${slidePath}`);
+    }
+
+    const slideDoc = parseXml(slideXml, slidePath);
+    const shape = getShapeElementByRendererIndex(slideDoc, shapeIndex);
+    if (!applyTransformToShape(shape, transform)) {
+      throw new Error('Could not update shape transform.');
+    }
+
+    const patchedExport = await buildZip(rawExport, new Map([[slidePath, serializeXml(slideDoc)]]));
+    await this.reloadFromBuffer(patchedExport, this.slideCountValue);
   }
 
   async updateShapeText(slideIndex: number, shapeIndex: number, text: string): Promise<void> {
@@ -1723,8 +2026,58 @@ export class PresentationEngine {
         applyRunPropertyChange(getRunProperties(run, slideDoc), slideDoc, change);
         changed = true;
       }
+      if (change.fontSizePt !== undefined && changed) {
+        disableShrinkAutofit(shape, slideDoc);
+      }
       return changed;
     });
+  }
+
+  /**
+   * Apply run-level formatting to the character range `[startOffset, endOffset)`
+   * inside a single paragraph. When the range is collapsed, the run containing
+   * the caret is styled. Runs are split at the range boundaries as needed.
+   */
+  async setRunStyleForRange(
+    slideIndex: number,
+    shapeIndex: number,
+    paragraphIndex: number,
+    startOffset: number,
+    endOffset: number,
+    change: RunStyleChange
+  ): Promise<void> {
+    await this.editSlideShape(slideIndex, shapeIndex, (shape, slideDoc) => {
+      const paragraph = getDrawingParagraphs(shape)[paragraphIndex];
+      if (!paragraph) {
+        throw new Error('Could not find the selected text paragraph.');
+      }
+
+      const changed = applyRunStyleToParagraphRange(paragraph, slideDoc, startOffset, endOffset, change);
+      if (change.fontSizePt !== undefined && changed) {
+        disableShrinkAutofit(shape, slideDoc);
+      }
+      return changed;
+    });
+  }
+
+  /** Whether every non-empty run in `[startOffset, endOffset)` has `flag` set. */
+  isRangeStyled(
+    slideIndex: number,
+    shapeIndex: number,
+    paragraphIndex: number,
+    startOffset: number,
+    endOffset: number,
+    flag: 'bold' | 'italic' | 'underline'
+  ): boolean {
+    try {
+      const slideDoc = parseXml(this.renderer.getSlideOoxml(slideIndex), getSlidePath(slideIndex));
+      const shape = getShapeElement(slideDoc, shapeIndex);
+      const paragraph = getDrawingParagraphs(shape)[paragraphIndex];
+      if (!paragraph) return false;
+      return isParagraphRangeStyled(paragraph, startOffset, endOffset, flag);
+    } catch {
+      return false;
+    }
   }
 
   /**

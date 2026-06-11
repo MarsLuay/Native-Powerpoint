@@ -64,7 +64,7 @@ export class PowerPointPresentController {
       event.preventDefault();
       this.previous();
     });
-    this.addListener(this.ownerDocument, 'keydown', (event) => this.handleKeydown(event as KeyboardEvent), true);
+    this.addListener(this.ownerDocument, 'keydown', (event) => this.handleKeydown(event), true);
     this.addListener(this.ownerDocument, 'fullscreenchange', () => this.handleFullscreenChange());
 
     this.renderCurrent();

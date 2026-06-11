@@ -61,7 +61,7 @@ export const POWERPOINT_EXTENSIONS = [
 ];
 
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'failed' | 'recovered' | 'view-only';
-type HandleName = 'nw' | 'ne' | 'sw' | 'se';
+type HandleName = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 'e' | 's' | 'w';
 type SvgSecurityDecision = 'compatibility' | 'yolo' | null;
 
 interface PointerPoint {
@@ -293,6 +293,30 @@ function normalizeSearchText(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+/** First face from a CSS `font-family` value, e.g. `"Calibri", sans-serif` → Calibri. */
+function parsePrimaryFontFamily(fontFamily: string): string | null {
+  const trimmed = fontFamily.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('"')) {
+    const end = trimmed.indexOf('"', 1);
+    if (end > 1) return trimmed.slice(1, end);
+  } else if (trimmed.startsWith("'")) {
+    const end = trimmed.indexOf("'", 1);
+    if (end > 1) return trimmed.slice(1, end);
+  }
+
+  const comma = trimmed.indexOf(',');
+  const primary = (comma >= 0 ? trimmed.slice(0, comma) : trimmed).trim();
+  if (!primary || primary === 'inherit' || primary === 'initial' || primary === 'unset') return null;
+
+  const generic = new Set([
+    'serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif',
+    'ui-monospace', 'ui-rounded', 'emoji', 'math', 'fangsong'
+  ]);
+  return generic.has(primary.toLowerCase()) ? null : primary;
+}
+
 function getToolbarTooltipText(target: HTMLElement): string {
   return (target.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
 }
@@ -495,6 +519,7 @@ export class NativePowerPointView extends FileView {
   private ungroupButton: HTMLButtonElement | null = null;
   private imageFileInput: HTMLInputElement | null = null;
   private replaceImageFileInput: HTMLInputElement | null = null;
+  private insertTableButton: HTMLButtonElement | null = null;
   private pendingReplaceShapeIndex: number | null = null;
   private activeInsertMenu: HTMLElement | null = null;
   private activeMenuBarTab: HTMLElement | null = null;
@@ -504,6 +529,7 @@ export class NativePowerPointView extends FileView {
   private activeTextStyleTarget: ShapeTextEditTarget | null = null;
   private textToolbarEl: HTMLElement | null = null;
   private textToolbarControls: TextToolbarControls | null = null;
+  private textToolbarShapeIndex: number | null = null;
   private currentRunStyle: RunStyleInfo | null = null;
   private textColorValue = '000000';
   private textHighlightValue = 'FFFF00';
@@ -932,7 +958,7 @@ export class NativePowerPointView extends FileView {
     this.createActionTab(bar, 'Settings', () => this.openPluginSettings());
 
     this.registerDomEvent(
-      document,
+      activeDocument,
       'pointerdown',
       (event) => {
         const target = isNode(event.target) ? event.target : null;
@@ -988,7 +1014,7 @@ export class NativePowerPointView extends FileView {
     if (this.activeMenuBarTab === tab && this.activeMenuBarDropdown) return;
     this.closeMenuBarDropdown();
 
-    const dropdown = document.body.createDiv({
+    const dropdown = activeDocument.body.createDiv({
       cls: 'native-powerpoint-menubar-dropdown native-powerpoint-light-surface'
     });
     for (const entry of getItems()) {
@@ -1171,7 +1197,7 @@ export class NativePowerPointView extends FileView {
       { label: 'Line', icon: 'minus', onClick: () => void this.insertShape('line') },
       { label: 'Arrow', icon: 'move-right', onClick: () => void this.insertShape('rightArrow') },
       'separator',
-      { label: 'Table', icon: 'table', onClick: () => this.openInsertTableModal() },
+      { label: 'Table', icon: 'table', onClick: () => this.openTableSizePicker(this.insertTableButton) },
       { label: 'Chart', icon: 'bar-chart-3', onClick: () => void this.insertChart() },
       'separator',
       { label: 'Bulleted list', icon: 'list', onClick: () => void this.applyListStyle('bullet') },
@@ -1242,7 +1268,7 @@ export class NativePowerPointView extends FileView {
   }
 
   private printSlideImages(urls: string[]): void {
-    const iframe = document.body.createEl('iframe', { cls: 'native-powerpoint-print-frame' });
+    const iframe = activeDocument.body.createEl('iframe', { cls: 'native-powerpoint-print-frame' });
     let cleaned = false;
     const cleanup = () => {
       if (cleaned) return;
@@ -1350,8 +1376,11 @@ export class NativePowerPointView extends FileView {
     this.createInsertToolbarGroup(toolbar);
 
     const slideGroup = toolbar.createDiv({ cls: 'native-powerpoint-toolbar-group' });
-    const newSlideButton = this.createEditIconButton(slideGroup, 'plus', 'New slide', () => {
-      this.toggleInsertMenu(newSlideButton, [
+    // Primary click adds a blank slide immediately (Google Slides "+" behavior).
+    this.createEditIconButton(slideGroup, 'plus', 'New slide', () => void this.addSlideWithLayout('blank'));
+    // A caret opens the layout choices without blocking the quick-add action.
+    const newSlideLayoutButton = this.createEditIconButton(slideGroup, 'chevron-down', 'New slide layout', () => {
+      this.toggleInsertMenu(newSlideLayoutButton, [
         { label: 'Blank', onClick: () => void this.addSlideWithLayout('blank') },
         { label: 'Title', onClick: () => void this.addSlideWithLayout('title') },
         { label: 'Title + Body', onClick: () => void this.addSlideWithLayout('titleBody') }
@@ -1401,7 +1430,7 @@ export class NativePowerPointView extends FileView {
       if (target instanceof Element && target.closest('.native-powerpoint-insert-menu-anchor')) return;
       this.closeInsertMenus();
     };
-    this.registerDomEvent(document, 'pointerdown', closeMenus, true);
+    this.registerDomEvent(activeDocument, 'pointerdown', closeMenus, true);
 
     if (!this.layoutEl) return;
     const input = this.layoutEl.createEl('input', {
@@ -1452,7 +1481,10 @@ export class NativePowerPointView extends FileView {
     });
 
     this.createEditIconButton(insertGroup, 'type', 'Insert text box', () => void this.addTextBox());
-    this.createEditIconButton(insertGroup, 'table', 'Insert table', () => this.openInsertTableModal());
+    const tableButton = this.createEditIconButton(insertGroup, 'table', 'Insert table', () =>
+      this.openTableSizePicker(tableButton)
+    );
+    this.insertTableButton = tableButton;
     this.createEditIconButton(insertGroup, 'bar-chart-3', 'Insert chart', () => void this.insertChart());
     this.createEditIconButton(insertGroup, 'list', 'Bulleted list', () => void this.applyListStyle('bullet'));
     this.createEditIconButton(insertGroup, 'list-ordered', 'Numbered list', () => void this.applyListStyle('number'));
@@ -1463,15 +1495,9 @@ export class NativePowerPointView extends FileView {
     this.distributeButtons = [];
     this.zOrderButtons = [];
 
+    // Object-align buttons were removed from the toolbar to declutter it; object
+    // alignment remains available via the right-click "Center on page" menu.
     const alignGroup = toolbar.createDiv({ cls: 'native-powerpoint-toolbar-group' });
-    this.alignButtons.push(
-      this.createIconButton(alignGroup, 'align-start-vertical', 'Align left', () => void this.alignSelectedShapes('left')),
-      this.createIconButton(alignGroup, 'align-center-vertical', 'Align center', () => void this.alignSelectedShapes('center')),
-      this.createIconButton(alignGroup, 'align-end-vertical', 'Align right', () => void this.alignSelectedShapes('right')),
-      this.createIconButton(alignGroup, 'align-start-horizontal', 'Align top', () => void this.alignSelectedShapes('top')),
-      this.createIconButton(alignGroup, 'align-center-horizontal', 'Align middle', () => void this.alignSelectedShapes('middle')),
-      this.createIconButton(alignGroup, 'align-end-horizontal', 'Align bottom', () => void this.alignSelectedShapes('bottom'))
-    );
     this.distributeButtons.push(
       this.createIconButton(alignGroup, 'align-horizontal-distribute-center', 'Distribute horizontally', () => void this.distributeSelectedShapes('horizontal')),
       this.createIconButton(alignGroup, 'align-vertical-distribute-center', 'Distribute vertically', () => void this.distributeSelectedShapes('vertical'))
@@ -1880,18 +1906,22 @@ export class NativePowerPointView extends FileView {
     anchor: HTMLButtonElement,
     items: { label: string; onClick: () => void }[]
   ): void {
-    if (this.activeInsertMenu?.dataset.anchorId === anchor.dataset.menuId) {
+    if (!anchor.dataset.menuId) {
+      anchor.dataset.menuId = `insert-menu-${Math.random().toString(36).slice(2)}`;
+    }
+
+    // Only treat a repeat click as "toggle closed" when a menu is actually open
+    // for this anchor. Without the explicit null check, a first click compares
+    // two `undefined`s (no open menu, no anchor id yet) and wrongly closes.
+    if (this.activeInsertMenu && this.activeInsertMenu.dataset.anchorId === anchor.dataset.menuId) {
       this.closeInsertMenus();
       return;
     }
 
     this.closeInsertMenus();
-    if (!anchor.dataset.menuId) {
-      anchor.dataset.menuId = `insert-menu-${Math.random().toString(36).slice(2)}`;
-    }
     anchor.classList.add('native-powerpoint-insert-menu-anchor');
 
-    const menu = document.body.createDiv({
+    const menu = activeDocument.body.createDiv({
       cls: 'native-powerpoint-insert-menu native-powerpoint-light-surface'
     });
     menu.dataset.anchorId = anchor.dataset.menuId;
@@ -1926,6 +1956,55 @@ export class NativePowerPointView extends FileView {
   private openInsertTableModal(): void {
     if (!this.ensureEditable('insert table')) return;
     new InsertTableModal(this.app, (rows, cols) => void this.insertTable(rows, cols)).open();
+  }
+
+  // Google Slides-style size picker: a hover grid that matches the look of the
+  // other toolbar popovers (color, font) instead of a separate modal dialog.
+  private openTableSizePicker(anchor: HTMLElement | null): void {
+    if (!this.ensureEditable('insert table')) return;
+    if (!anchor) {
+      this.openInsertTableModal();
+      return;
+    }
+
+    const cols = 10;
+    const rows = 8;
+    this.openToolbarPopover(anchor, (popover) => {
+      popover.addClass('native-powerpoint-table-picker');
+
+      const grid = popover.createDiv({ cls: 'native-powerpoint-table-picker-grid' });
+      const label = popover.createDiv({
+        cls: 'native-powerpoint-table-picker-label',
+        text: 'Insert table'
+      });
+
+      const cells: HTMLButtonElement[] = [];
+      const highlight = (activeCols: number, activeRows: number): void => {
+        cells.forEach((cell, index) => {
+          const c = index % cols;
+          const r = Math.floor(index / cols);
+          cell.toggleClass('is-active', c < activeCols && r < activeRows);
+        });
+        label.setText(activeCols > 0 && activeRows > 0 ? `${activeCols} × ${activeRows}` : 'Insert table');
+      };
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = grid.createEl('button', {
+            cls: 'native-powerpoint-table-picker-cell',
+            attr: { 'aria-label': `${c + 1} × ${r + 1}` }
+          });
+          cell.addEventListener('pointerenter', () => highlight(c + 1, r + 1));
+          this.bindToolbarButton(cell, () => {
+            this.closeToolbarPopover();
+            void this.insertTable(r + 1, c + 1);
+          });
+          cells.push(cell);
+        }
+      }
+
+      grid.addEventListener('pointerleave', () => highlight(0, 0));
+    });
   }
 
   private async insertImageFromVaultFile(file: TFile): Promise<void> {
@@ -2060,7 +2139,7 @@ export class NativePowerPointView extends FileView {
     // position:fixed child resolve against the transformed box and render in
     // the wrong place.
     this.findPanelEl?.remove();
-    const panel = document.body.createDiv({ cls: 'native-powerpoint-find-panel native-powerpoint-find-panel-floating native-powerpoint-light-surface' });
+    const panel = activeDocument.body.createDiv({ cls: 'native-powerpoint-find-panel native-powerpoint-find-panel-floating native-powerpoint-light-surface' });
     this.findPanelEl = panel;
 
     const findRow = panel.createDiv({ cls: 'native-powerpoint-find-row' });
@@ -2540,7 +2619,7 @@ export class NativePowerPointView extends FileView {
         if (this.findButtonEl?.contains(target)) return;
         this.closeFindPanel();
       };
-      document.addEventListener('pointerdown', this.findPanelDismissHandler, true);
+      activeDocument.addEventListener('pointerdown', this.findPanelDismissHandler, true);
     }
     if (!this.findPanelRepositionHandler) {
       this.findPanelRepositionHandler = () => this.positionFindPanel();
@@ -2551,7 +2630,7 @@ export class NativePowerPointView extends FileView {
 
   private detachFindPanelDismissHandlers(): void {
     if (this.findPanelDismissHandler) {
-      document.removeEventListener('pointerdown', this.findPanelDismissHandler, true);
+      activeDocument.removeEventListener('pointerdown', this.findPanelDismissHandler, true);
       this.findPanelDismissHandler = null;
     }
     if (this.findPanelRepositionHandler) {
@@ -2965,10 +3044,14 @@ export class NativePowerPointView extends FileView {
       if (
         (event.key === 'Delete' || event.key === 'Backspace')
         && this.lastInteractionRegion === 'thumbnails'
-        && this.selectedSlideIndices.size > 0
       ) {
+        if (this.selectedSlideIndices.size > 0) {
+          event.preventDefault();
+          void this.deleteSelectedSlides();
+          return;
+        }
         event.preventDefault();
-        void this.deleteSelectedSlides();
+        void this.deleteSlide();
         return;
       }
 
@@ -3424,7 +3507,9 @@ export class NativePowerPointView extends FileView {
         } else if (event.metaKey || event.ctrlKey) {
           this.toggleSlideSelection(index);
         } else {
-          this.clearSlideSelection();
+          // A plain click both navigates to and selects the slide so it can be
+          // deleted with the keyboard (matching Google Slides' filmstrip).
+          this.selectedSlideIndices = new Set([index]);
           void this.goToSlide(index);
         }
       });
@@ -4062,7 +4147,13 @@ export class NativePowerPointView extends FileView {
     });
 
     const selected = this.svgEl.querySelector(`g[data-ooxml-shape-idx="${shapeIndex}"]`);
-    if (!isSVGGElement(selected)) return;
+    if (!isSVGGElement(selected)) {
+      this.selectedShapeIndex = null;
+      this.selectedShapeIndices.clear();
+      this.selectedTransform = null;
+      this.removeSelectionOverlay();
+      return;
+    }
 
     selected.addClass('native-powerpoint-shape-selected');
     this.selectedTransform = cloneTransform(this.engine.getShapeTransform(selected));
@@ -4807,14 +4898,6 @@ export class NativePowerPointView extends FileView {
     const canEdit = this.canEdit();
     const menu = this.createNativeMenu();
 
-    if (kind === 'text') {
-      menu.addItem((item) => {
-        item.setTitle('Edit text').setIcon('pencil').onClick(() => this.startTextEditor());
-        if (!canEdit) item.setDisabled(true);
-      });
-      menu.addSeparator();
-    }
-
     menu.addItem((item) => {
       item.setTitle('Cut').setIcon('scissors').onClick(() => void this.cutSelectedShape());
       if (!canEdit) item.setDisabled(true);
@@ -4978,6 +5061,10 @@ export class NativePowerPointView extends FileView {
 
     const element = isElement(target) ? target : target.parentElement;
     if (element?.closest('.native-powerpoint-selection-box')) return false;
+    // The contextual text toolbar lives inside the canvas pane, so clicks on it
+    // must not be treated as background clicks (which would commit/clear the
+    // editor and hide the toolbar mid-interaction).
+    if (element?.closest('.native-powerpoint-text-toolbar, .native-powerpoint-toolbar-popover')) return false;
 
     return true;
   }
@@ -5134,7 +5221,7 @@ export class NativePowerPointView extends FileView {
         && !event.metaKey
         && !event.ctrlKey
         && !event.altKey
-        && (event.key.length === 1 || ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key))
+        && (event.key === 'Enter' || event.key.length === 1 || ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key))
       ) {
         this.clearWholeShapeInlineSelection();
       }
@@ -5150,7 +5237,7 @@ export class NativePowerPointView extends FileView {
     this.activeEditorCommit = commit;
 
     editor.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && ((event.metaKey || event.ctrlKey) || !event.shiftKey)) {
+      if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         void commit();
       } else if (event.key === 'Escape') {
@@ -5165,7 +5252,26 @@ export class NativePowerPointView extends FileView {
         this.removeActiveEditor(editor);
       }
     });
-    editor.addEventListener('blur', () => void commit());
+    editor.addEventListener('blur', (event) => {
+      // A bare modifier press (e.g. ⌘/Ctrl arming the app menu) or the window
+      // losing key focus blurs the textarea with no related target. Treat that
+      // as transient: keep the editor open and restore focus so an in-progress
+      // text selection isn't discarded. Genuine clicks outside the editor are
+      // already committed by the document-level pointerdown handler before this
+      // fires, so by then activeEditor no longer matches and we fall through to
+      // commit (which early-returns). Focus moving to another real element
+      // (e.g. Tab) still commits.
+      const next = event.relatedTarget;
+      const stayEditing = next === null
+        || (isElement(next)
+          && next.closest('.native-powerpoint-text-toolbar, .native-powerpoint-toolbar-popover') !== null);
+      if (stayEditing && this.activeEditor === editor && editor.isConnected) {
+        this.focusEditorWithoutCanvasScroll(editor);
+        updateCaret();
+        return;
+      }
+      void commit();
+    });
     this.focusEditorWithoutCanvasScroll(editor);
     this.placeInlineCaret(editor, target.element, clientX, clientY, box);
     this.updateTextToolbar();
@@ -5231,7 +5337,7 @@ export class NativePowerPointView extends FileView {
   }
 
   private getTextStyleContext(): TextStyleContext | null {
-    if (!this.engine || !this.canEdit() || !this.svgEl || !this.activeEditor) return null;
+    if (!this.engine || !this.canEdit() || !this.svgEl) return null;
 
     if (this.activeTextStyleTarget && this.activeEditor) {
       const target = this.activeTextStyleTarget;
@@ -5244,10 +5350,16 @@ export class NativePowerPointView extends FileView {
       };
     }
 
+    // Keep the formatting toolbar visible while a single text shape is selected,
+    // even when no inline editor is active (e.g. after the editor is flushed
+    // because the user clicked into the toolbar's font-size box).
     if (this.selectedShapeIndex !== null && this.selectedShapeIndices.size <= 1) {
-      const anchor = this.getSelectedBox();
-      if (anchor) {
-        return { shapeIndex: this.selectedShapeIndex, run: null, anchor };
+      const shape = this.svgEl.querySelector(`g[data-ooxml-shape-idx="${this.selectedShapeIndex}"]`);
+      if (shape && this.shapeHasEditableText(shape)) {
+        const anchor = this.getSelectedBox();
+        if (anchor) {
+          return { shapeIndex: this.selectedShapeIndex, run: null, anchor };
+        }
       }
     }
 
@@ -5264,6 +5376,20 @@ export class NativePowerPointView extends FileView {
     const runIndex = Number(run.getAttribute('data-ooxml-run-idx'));
     if (!Number.isFinite(paragraphIndex) || !Number.isFinite(runIndex)) return null;
     return { paragraphIndex, runIndex };
+  }
+
+  private buildParagraphEditTarget(shapeIndex: number, paragraphIndex: number): ShapeTextEditTarget | null {
+    const shape = this.svgEl?.querySelector(`g[data-ooxml-shape-idx="${shapeIndex}"]`);
+    if (!shape) return null;
+
+    // Seed from a run tspan inside the target paragraph so getTextEditTarget
+    // resolves the correct paragraph (passing the paragraph tspan alone makes it
+    // fall back to the first paragraph in the shape).
+    const seed = shape.querySelector(`tspan[data-ooxml-para-idx="${paragraphIndex}"] tspan[data-ooxml-run-idx]`)
+      ?? shape.querySelector(`tspan[data-ooxml-para-idx="${paragraphIndex}"]`)
+      ?? shape.querySelector('text');
+    const target = this.getTextEditTarget(seed);
+    return target?.kind === 'shape-paragraph' ? target : null;
   }
 
   private buildRunTarget(shapeIndex: number, paragraphIndex: number, runIndex: number): ShapeTextEditTarget | null {
@@ -5305,13 +5431,23 @@ export class NativePowerPointView extends FileView {
     const controls = this.ensureTextToolbar();
     if (!controls || !this.textToolbarEl) return;
 
+    // Position the toolbar only when it first appears for a shape. Subsequent
+    // updates (e.g. flushing the inline editor after clicking the font-size box)
+    // change the anchor from the caret line to the whole-shape box, which would
+    // make the toolbar jump; keeping the spawn position avoids that.
+    const wasVisible = this.textToolbarEl.hasClass('is-visible');
+    const shapeChanged = this.textToolbarShapeIndex !== context.shapeIndex;
     this.textToolbarEl.addClass('is-visible');
-    this.positionTextToolbar(context.anchor);
+    if (!wasVisible || shapeChanged) {
+      this.positionTextToolbar(context.anchor);
+      this.textToolbarShapeIndex = context.shapeIndex;
+    }
     this.reflectTextToolbarState(context);
   }
 
   private hideTextToolbar(): void {
     this.textToolbarEl?.removeClass('is-visible');
+    this.textToolbarShapeIndex = null;
     this.closeToolbarPopover();
     this.currentRunStyle = null;
   }
@@ -5345,10 +5481,11 @@ export class NativePowerPointView extends FileView {
     controls.bold.toggleClass('is-active', Boolean(style?.bold));
     controls.italic.toggleClass('is-active', Boolean(style?.italic));
     controls.underline.toggleClass('is-active', Boolean(style?.underline));
-    controls.fontLabel.setText(style?.fontFamily || 'Font');
+    controls.fontLabel.setText(style?.fontFamily ?? this.getEffectiveFontFamily(context) ?? 'Font');
 
     if (activeDocument.activeElement !== controls.fontSizeInput) {
-      controls.fontSizeInput.value = style?.fontSizePt ? String(Math.round(style.fontSizePt)) : '';
+      const sizePt = style?.fontSizePt ?? this.getEffectiveFontSizePt(context);
+      controls.fontSizeInput.value = sizePt ? String(Math.round(sizePt)) : '';
     }
 
     if (style?.color) {
@@ -5364,6 +5501,87 @@ export class NativePowerPointView extends FileView {
     for (const align of ['l', 'ctr', 'r', 'just'] as ParagraphAlignment[]) {
       controls.alignButtons[align].toggleClass('is-active', alignment === align);
     }
+  }
+
+  // EMU per SVG user unit, used to convert rendered font sizes back to points.
+  private getSvgEmuPerUnit(): number | null {
+    const scale = Number(this.svgEl?.getAttribute('data-ooxml-scale'));
+    if (Number.isFinite(scale) && scale > 0) return scale;
+
+    const cx = Number(this.svgEl?.getAttribute('data-ooxml-slide-cx'));
+    const width = this.svgEl ? Number.parseFloat(this.svgEl.getAttribute('width') || '') : Number.NaN;
+    if (Number.isFinite(cx) && Number.isFinite(width) && width > 0) return cx / width;
+
+    return null;
+  }
+
+  /**
+   * Detect the effective font size (in points) actually rendered for the
+   * relevant runs, so the toolbar can show a value even when the size is
+   * inherited from the theme/placeholder rather than authored on each run.
+   * Returns null when sizes are mixed or cannot be determined.
+   */
+  private getRelevantTextRuns(context: TextStyleContext): SVGTSpanElement[] {
+    if (!this.svgEl) return [];
+    const shape = this.svgEl.querySelector(`g[data-ooxml-shape-idx="${context.shapeIndex}"]`);
+    if (!shape) return [];
+
+    const allRuns = Array.from(shape.querySelectorAll('tspan[data-ooxml-run-idx]')).filter(isSVGTSpanElement);
+    const targetRun = context.run;
+    if (!targetRun) return allRuns;
+
+    return allRuns.filter((run) => {
+      const para = run.closest('tspan[data-ooxml-para-idx]');
+      return Number(run.getAttribute('data-ooxml-run-idx')) === targetRun.runIndex
+        && Number(para?.getAttribute('data-ooxml-para-idx')) === targetRun.paragraphIndex;
+    });
+  }
+
+  private getEffectiveFontSizePt(context: TextStyleContext): number | null {
+    const emuPerUnit = this.getSvgEmuPerUnit();
+    if (!emuPerUnit) return null;
+
+    const runs = this.getRelevantTextRuns(context);
+    if (runs.length === 0) return null;
+
+    const EMU_PER_POINT = 12700;
+    let detected: number | null = null;
+    for (const run of runs) {
+      if ((run.textContent || '').length === 0) continue;
+      const userUnits = Number.parseFloat(window.getComputedStyle(run).fontSize);
+      if (!Number.isFinite(userUnits) || userUnits <= 0) continue;
+      const rounded = Math.round((userUnits * emuPerUnit) / EMU_PER_POINT);
+      if (detected === null) {
+        detected = rounded;
+      } else if (detected !== rounded) {
+        return null;
+      }
+    }
+    return detected;
+  }
+
+  /**
+   * Detect the effective font family actually rendered for the relevant runs,
+   * so the toolbar can show a value when the face is inherited from the theme
+   * or placeholder rather than authored on each run. Returns null when families
+   * are mixed or cannot be determined.
+   */
+  private getEffectiveFontFamily(context: TextStyleContext): string | null {
+    const runs = this.getRelevantTextRuns(context);
+    if (runs.length === 0) return null;
+
+    let detected: string | null = null;
+    for (const run of runs) {
+      if ((run.textContent || '').length === 0) continue;
+      const family = parsePrimaryFontFamily(window.getComputedStyle(run).fontFamily);
+      if (!family) continue;
+      if (detected === null) {
+        detected = family;
+      } else if (detected !== family) {
+        return null;
+      }
+    }
+    return detected;
   }
 
   private ensureTextToolbar(): TextToolbarControls | null {
@@ -5481,12 +5699,33 @@ export class NativePowerPointView extends FileView {
   }
 
   private toggleRunFlag(flag: 'bold' | 'italic' | 'underline'): void {
+    const editor = this.activeEditor;
+    const target = this.activeTextStyleTarget;
+    if (editor && target && this.engine) {
+      const start = Math.min(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
+      const end = Math.max(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
+      if (start < end) {
+        const next = !this.engine.isRangeStyled(
+          this.currentSlide,
+          target.shapeIndex,
+          target.paragraphIndex,
+          start,
+          end,
+          flag
+        );
+        this.applyRunStyle({ [flag]: next });
+        return;
+      }
+    }
+
     const current = this.currentRunStyle?.[flag] ?? false;
     this.applyRunStyle({ [flag]: !current });
   }
 
   private stepFontSize(delta: number): void {
-    const current = this.currentRunStyle?.fontSizePt ?? 18;
+    const inputValue = Number(this.textToolbarControls?.fontSizeInput?.value);
+    const current = this.currentRunStyle?.fontSizePt
+      ?? (Number.isFinite(inputValue) && inputValue > 0 ? inputValue : 18);
     const next = Math.min(TEXT_TOOLBAR_MAX_FONT_SIZE, Math.max(TEXT_TOOLBAR_MIN_FONT_SIZE, Math.round(current) + delta));
     this.applyRunStyle({ fontSizePt: next });
   }
@@ -5516,20 +5755,35 @@ export class NativePowerPointView extends FileView {
   private applyRunStyle(change: RunStyleChange): void {
     const engine = this.engine;
     if (!engine) return;
-    void this.runTextFormatting('Format text', (shapeIndex, run) =>
-      engine.setRunStyle(this.currentSlide, shapeIndex, run, change));
+    void this.runTextFormatting('Format text', (shapeIndex, run, selection) => {
+      if (selection) {
+        return engine.setRunStyleForRange(
+          this.currentSlide,
+          shapeIndex,
+          selection.paragraphIndex,
+          selection.start,
+          selection.end,
+          change
+        );
+      }
+      return engine.setRunStyle(this.currentSlide, shapeIndex, run, change);
+    });
   }
 
   private applyAlignment(align: ParagraphAlignment): void {
     const engine = this.engine;
     if (!engine) return;
-    void this.runTextFormatting('Align text', (shapeIndex, run) =>
+    void this.runTextFormatting('Align text', (shapeIndex, run, _selection) =>
       engine.setParagraphAlignment(this.currentSlide, shapeIndex, run ? run.paragraphIndex : null, align));
   }
 
   private async runTextFormatting(
     label: string,
-    apply: (shapeIndex: number, run: RunTarget | null) => Promise<void>
+    apply: (
+      shapeIndex: number,
+      run: RunTarget | null,
+      selection: { paragraphIndex: number; start: number; end: number } | null
+    ) => Promise<void>
   ): Promise<void> {
     const engine = this.engine;
     if (!engine || !this.ensureEditable('format text')) return;
@@ -5537,23 +5791,31 @@ export class NativePowerPointView extends FileView {
     const context = this.getTextStyleContext();
     if (!context) return;
 
+    // Capture the live inline-editor selection up front. The textarea itself
+    // lives in the canvas pane (not the slide SVG), so it survives a slide
+    // re-render — we keep it open and refresh its element references in place
+    // afterwards instead of tearing it down and reopening, which is what used to
+    // drop the selection and make a follow-up Bold apply to the whole shape.
+    const editor = this.activeEditor;
+    const styleTarget = this.activeTextStyleTarget;
     let pendingText: string | null = null;
-    let reopenRun: RunTarget | null = null;
-    if (this.activeEditor && this.activeTextStyleTarget && context.run) {
-      const editor = this.activeEditor;
-      const target = this.activeTextStyleTarget;
-      pendingText = editor.value !== target.text ? editor.value : null;
-      reopenRun = { paragraphIndex: target.paragraphIndex, runIndex: target.runIndex };
-      this.removeActiveEditor(editor);
+    let selectionRange: { paragraphIndex: number; start: number; end: number } | null = null;
+    let savedStart = 0;
+    let savedEnd = 0;
+    if (editor && styleTarget) {
+      savedStart = Math.min(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
+      savedEnd = Math.max(editor.selectionStart ?? 0, editor.selectionEnd ?? 0);
+      selectionRange = { paragraphIndex: styleTarget.paragraphIndex, start: savedStart, end: savedEnd };
+      pendingText = editor.value !== styleTarget.text ? editor.value : null;
     }
 
     const scrollPosition = this.captureCanvasScroll();
     try {
       const history = await this.captureHistoryEntry(label);
-      if (pendingText !== null && reopenRun) {
-        await engine.updateTextRun(this.currentSlide, context.shapeIndex, reopenRun.paragraphIndex, reopenRun.runIndex, pendingText);
+      if (pendingText !== null && selectionRange) {
+        await engine.updateParagraphText(this.currentSlide, context.shapeIndex, selectionRange.paragraphIndex, pendingText);
       }
-      await apply(context.shapeIndex, context.run);
+      await apply(context.shapeIndex, context.run, selectionRange);
       this.recordHistoryEntry(history);
       this.markDirty();
 
@@ -5561,10 +5823,14 @@ export class NativePowerPointView extends FileView {
       if (rendered) {
         this.restoreCanvasScrollSoon(scrollPosition);
         await this.renderThumbnails();
-        if (reopenRun) {
-          const reopenTarget = this.buildRunTarget(context.shapeIndex, reopenRun.paragraphIndex, reopenRun.runIndex);
-          if (reopenTarget) {
-            this.startTextEditor(reopenTarget);
+        if (editor && this.activeEditor === editor && selectionRange) {
+          if (this.refreshActiveShapeEditorAfterRender()) {
+            const length = editor.value.length;
+            this.clearWholeShapeInlineSelection();
+            editor.setSelectionRange(Math.min(savedStart, length), Math.min(savedEnd, length));
+            this.refreshInlineEditorGeometry();
+          } else {
+            this.removeActiveEditor(editor);
           }
         }
         this.updateTextToolbar();
@@ -5574,9 +5840,58 @@ export class NativePowerPointView extends FileView {
     }
   }
 
+  /**
+   * After a slide re-render, re-point the still-open inline editor at the freshly
+   * rendered paragraph/run nodes (the old ones are detached) and rebuild the
+   * SVG-side caret. Returns false when the paragraph can no longer be found.
+   */
+  private refreshActiveShapeEditorAfterRender(): boolean {
+    const target = this.activeShapeTextTarget;
+    if (!target || !this.activeEditor) return false;
+
+    const fresh = this.buildParagraphEditTarget(target.shapeIndex, target.paragraphIndex);
+    if (!fresh) return false;
+
+    this.activeEditorTarget?.classList.remove('native-powerpoint-text-editing');
+    target.element = fresh.element;
+    target.runElements = fresh.runElements;
+    target.runIndex = fresh.runIndex;
+    target.text = fresh.text;
+
+    this.activeEditorTarget = fresh.element;
+    this.activeEditorTarget.classList.add('native-powerpoint-text-editing');
+    this.activeTextStyleTarget = this.getPrimaryStyleRunTarget(target);
+    this.slideSurface?.addClass('is-inline-text-editing');
+
+    // The previous caret/selection rects lived inside the SVG that was just
+    // replaced, so drop the stale references and re-create the caret line.
+    this.removeInlineSelection();
+    this.activeInlineCaret = activeDocument.createElementNS('http://www.w3.org/2000/svg', 'line');
+    this.activeInlineCaret.classList.add('native-powerpoint-svg-caret');
+    this.activeInlineCaret.setAttribute('aria-hidden', 'true');
+    this.svgEl?.appendChild(this.activeInlineCaret);
+    this.removeSelectionOverlay();
+    return true;
+  }
+
+  private refreshInlineEditorGeometry(): void {
+    const editor = this.activeEditor;
+    const target = this.activeShapeTextTarget;
+    if (!editor || !target) return;
+
+    const box = this.getElementBox(target.element);
+    if (box) {
+      this.positionTextRunEditor(editor, box);
+    }
+    this.focusEditorWithoutCanvasScroll(editor);
+    this.updateInlineCaret(editor, target.element);
+  }
+
   private openFontMenu(anchor: HTMLElement): void {
     const fonts = [...TEXT_TOOLBAR_FONTS];
-    const current = this.currentRunStyle?.fontFamily;
+    const context = this.getTextStyleContext();
+    const current = this.currentRunStyle?.fontFamily
+      ?? (context ? this.getEffectiveFontFamily(context) : null);
     if (current && !fonts.includes(current)) {
       fonts.unshift(current);
     }
@@ -6596,6 +6911,23 @@ export class NativePowerPointView extends FileView {
     return runs.filter(isSVGTSpanElement);
   }
 
+  private collectParagraphLineContainers(textEl: SVGTextElement, paragraphIndex: number): SVGTSpanElement[] {
+    const direct = Array.from(textEl.children).filter(
+      (child): child is SVGTSpanElement =>
+        isSVGTSpanElement(child) && child.getAttribute('data-ooxml-para-idx') === String(paragraphIndex)
+    );
+    if (direct.length > 0) return direct;
+
+    const nested = textEl.querySelector(`tspan[data-ooxml-para-idx="${paragraphIndex}"]`);
+    return nested && isSVGTSpanElement(nested) ? [nested] : [];
+  }
+
+  private getParagraphPlainText(lineContainers: SVGTSpanElement[]): string {
+    return lineContainers
+      .map((container) => this.collectParagraphRuns(container).map((run) => run.textContent || '').join(''))
+      .join('\n');
+  }
+
   private getTextEditTarget(element: Element | null): TextEditTarget | null {
     const textEl = element?.closest('text');
     if (!isSVGTextElement(textEl) || textEl.closest(GENERATED_GRID_SELECTOR)) return null;
@@ -6610,8 +6942,8 @@ export class NativePowerPointView extends FileView {
       paraContainer = textEl.querySelector('tspan[data-ooxml-para-idx]') ?? textEl;
     }
 
-    const runElements = this.collectParagraphRuns(paraContainer);
-    if (runElements.length === 0) {
+    const seedRuns = this.collectParagraphRuns(paraContainer);
+    if (seedRuns.length === 0) {
       const text = textEl.textContent || '';
       if (!text) return null;
       return {
@@ -6625,19 +6957,22 @@ export class NativePowerPointView extends FileView {
       };
     }
 
-    const firstRun = runElements[0];
+    const firstRun = seedRuns[0];
     if (!firstRun) return null;
 
     const paragraph = firstRun.closest('tspan[data-ooxml-para-idx]');
     const paragraphIndex = Number(paragraph?.getAttribute('data-ooxml-para-idx') ?? 0);
-    const geometryElement = paragraph && isSVGTSpanElement(paragraph) ? paragraph : textEl;
+    const resolvedParagraphIndex = Number.isFinite(paragraphIndex) ? paragraphIndex : 0;
+    const lineContainers = this.collectParagraphLineContainers(textEl, resolvedParagraphIndex);
+    const geometryElement = lineContainers[0] ?? (paragraph && isSVGTSpanElement(paragraph) ? paragraph : textEl);
+    const runElements = lineContainers.flatMap((container) => this.collectParagraphRuns(container));
     const firstRunIndex = Number(firstRun.getAttribute('data-ooxml-run-idx') ?? 0);
-    const text = runElements.map((run) => run.textContent || '').join('');
+    const text = this.getParagraphPlainText(lineContainers.length > 0 ? lineContainers : [paraContainer].filter(isSVGTSpanElement));
 
     return {
       kind: 'shape-paragraph',
       shapeIndex,
-      paragraphIndex: Number.isFinite(paragraphIndex) ? paragraphIndex : 0,
+      paragraphIndex: resolvedParagraphIndex,
       runIndex: Number.isFinite(firstRunIndex) ? firstRunIndex : 0,
       text,
       element: geometryElement,
@@ -6713,6 +7048,17 @@ export class NativePowerPointView extends FileView {
     if (!this.selectionOverlay) {
       this.selectionOverlay = this.canvasPane.createDiv({ cls: 'native-powerpoint-selection-box' });
       if (this.canEdit()) {
+        // Edge hit-zones first so the corner dots stack above them at overlaps.
+        // Each edge stretches the object along a single axis.
+        for (const handle of ['n', 'e', 's', 'w'] as HandleName[]) {
+          const edgeEl = this.selectionOverlay.createDiv({ cls: `native-powerpoint-resize-edge native-powerpoint-resize-${handle}` });
+          edgeEl.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            this.startDrag(event, 'resize', handle);
+          });
+        }
+
         for (const handle of ['nw', 'ne', 'sw', 'se'] as HandleName[]) {
           const handleEl = this.selectionOverlay.createDiv({ cls: `native-powerpoint-resize-handle native-powerpoint-resize-${handle}` });
           handleEl.addEventListener('pointerdown', (event) => {
@@ -7013,7 +7359,7 @@ export class NativePowerPointView extends FileView {
 
       const history = await this.captureHistoryEntry(label);
       for (const update of changed) {
-        this.engine.updateShapeTransform(this.currentSlide, update.index, update.transform);
+        await this.engine.updateShapeTransform(this.currentSlide, update.index, update.transform);
       }
       this.recordHistoryEntry(history);
       this.markDirty();
@@ -7179,10 +7525,12 @@ export class NativePowerPointView extends FileView {
 
     try {
       const selected = this.getSelectedShapeElement();
+      const shapeIndex = selected ? getShapeIndex(selected) : this.selectedShapeIndex;
+      if (shapeIndex === null) return;
       if (selected && transformsMatch(this.engine.getShapeTransform(selected), transform)) return;
 
       const history = await this.captureHistoryEntry('Edit layout');
-      this.engine.updateShapeTransform(this.currentSlide, this.selectedShapeIndex, transform);
+      await this.engine.updateShapeTransform(this.currentSlide, shapeIndex, transform);
       this.selectedTransform = cloneTransform(transform);
       this.recordHistoryEntry(history);
       this.markDirty();

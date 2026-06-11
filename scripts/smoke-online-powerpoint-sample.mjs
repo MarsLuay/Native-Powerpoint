@@ -173,7 +173,7 @@ try {
   assert.ok(insertedShape, 'Inserted text box did not render as a selectable shape.');
 
   const transform = editEngine.getShapeTransform(insertedShape);
-  editEngine.updateShapeTransform(slideIndex, insertedShapeIndex, {
+  await editEngine.updateShapeTransform(slideIndex, insertedShapeIndex, {
     ...transform,
     x: transform.x + editEngine.pxToEmu(12),
     y: transform.y + editEngine.pxToEmu(10),

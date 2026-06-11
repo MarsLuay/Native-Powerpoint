@@ -210,7 +210,6 @@ export class DocxidianSettingTab extends PluginSettingTab {
 			.addSlider(slider => slider
 				.setLimits(MIN_DEFAULT_ZOOM, MAX_DEFAULT_ZOOM, DEFAULT_ZOOM_STEP)
 				.setValue(selectedZoom)
-				.setDynamicTooltip()
 				.onChange(async (value) => {
 					const zoom = normalizeDefaultZoom(value);
 					this.plugin.settings.defaultZoom = zoom;

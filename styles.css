@@ -1668,6 +1668,21 @@ body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-text-toolb
 	color: var(--text-normal);
 }
 
+/*
+ * The Google Slides light/dark chrome overrides above force buttons to a
+ * transparent background, which also blanks out the color-picker swatches (they
+ * are <button>s). Re-assert each swatch's own color with matching specificity so
+ * the palette actually shows colors and keeps them on hover/focus.
+ */
+body .native-powerpoint-light-surface.native-powerpoint-light-surface .native-powerpoint-color-popover-swatch,
+body .native-powerpoint-light-surface.native-powerpoint-light-surface .native-powerpoint-color-popover-swatch:hover,
+body .native-powerpoint-light-surface.native-powerpoint-light-surface .native-powerpoint-color-popover-swatch:focus,
+body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-color-popover-swatch,
+body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-color-popover-swatch:hover,
+body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-color-popover-swatch:focus {
+	background: var(--np-swatch-color, transparent);
+}
+
 .native-powerpoint-layout {
 	display: flex;
 	flex: 1 1 auto;
@@ -2059,7 +2074,6 @@ body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-text-toolb
 	overflow-x: auto;
 	overflow-y: hidden;
 	padding: 4px 12px;
-	scrollbar-width: thin;
 }
 
 .native-powerpoint-toolbar::-webkit-scrollbar {
@@ -2544,6 +2558,47 @@ body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-text-toolb
 	right: -6px;
 }
 
+/* Transparent hit-zones over each border so hovering an edge stretches the
+ * object along that single axis. Inset from the corners so the corner dots
+ * keep their two-axis resize behavior. */
+.native-powerpoint-resize-edge {
+	pointer-events: auto;
+	position: absolute;
+	z-index: 4;
+}
+
+.native-powerpoint-resize-n,
+.native-powerpoint-resize-s {
+	cursor: ns-resize;
+	height: 11px;
+	left: 8px;
+	right: 8px;
+}
+
+.native-powerpoint-resize-e,
+.native-powerpoint-resize-w {
+	bottom: 8px;
+	cursor: ew-resize;
+	top: 8px;
+	width: 11px;
+}
+
+.native-powerpoint-resize-n {
+	top: -5px;
+}
+
+.native-powerpoint-resize-s {
+	bottom: -5px;
+}
+
+.native-powerpoint-resize-w {
+	left: -5px;
+}
+
+.native-powerpoint-resize-e {
+	right: -5px;
+}
+
 .native-powerpoint-rotate-stem {
 	background: var(--interactive-accent);
 	height: 18px;
@@ -2778,6 +2833,48 @@ body.theme-dark.theme-dark .native-powerpoint-root .native-powerpoint-text-toolb
 	gap: 8px;
 	justify-content: space-between;
 	margin-top: 8px;
+}
+
+.native-powerpoint-table-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.native-powerpoint-table-picker-grid {
+	display: grid;
+	gap: 3px;
+	grid-template-columns: repeat(10, 18px);
+}
+
+.native-powerpoint-table-picker-cell {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 2px;
+	cursor: pointer;
+	height: 18px;
+	padding: 0;
+	width: 18px;
+}
+
+.native-powerpoint-table-picker-cell.is-active {
+	background: #aecbfa;
+	border-color: #4285f4;
+}
+
+.native-powerpoint-table-picker-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	text-align: center;
+}
+
+/* Pinned light palette overrides generic button chrome; re-assert the
+ * accent fill (and keep it while hovered) for highlighted picker cells. */
+body .native-powerpoint-light-surface.native-powerpoint-light-surface .native-powerpoint-table-picker-cell.is-active,
+body .native-powerpoint-light-surface.native-powerpoint-light-surface .native-powerpoint-table-picker-cell.is-active:hover {
+	background: #aecbfa;
+	border-color: #4285f4;
+	color: #202124;
 }
 
 .native-powerpoint-font-menu {

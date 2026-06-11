@@ -196,6 +196,68 @@ test("pasted and duplicated shapes receive fresh a16:creationId GUIDs", async ()
   assert.equal(guids.filter((guid) => guid === seedGuid).length, 1, "only the source shape keeps the seed GUID");
 });
 
+test("setRunStyleForRange bolds only the selected characters within a paragraph", async () => {
+  const { PresentationEngine } = await loadPresentationEngineModule();
+  const input = await readDeck("features.pptx");
+  const engine = await PresentationEngine.load(toArrayBuffer(input));
+
+  const shapeIndex = 0;
+  const paragraphIndex = 0;
+  await engine.updateParagraphText(0, shapeIndex, paragraphIndex, "Hello world");
+  await engine.setRunStyle(0, shapeIndex, { paragraphIndex, runIndex: 0 }, { bold: false });
+  await engine.setRunStyleForRange(0, shapeIndex, paragraphIndex, 6, 11, { bold: true });
+
+  assert.equal(engine.getRunStyle(0, shapeIndex, paragraphIndex, 0)?.bold, false);
+  assert.equal(engine.getRunStyle(0, shapeIndex, paragraphIndex, 0)?.fontSizePt, 28);
+  assert.equal(engine.getRunStyle(0, shapeIndex, paragraphIndex, 1)?.bold, true);
+  assert.equal(engine.isRangeStyled(0, shapeIndex, paragraphIndex, 6, 11, "bold"), true);
+  assert.equal(engine.isRangeStyled(0, shapeIndex, paragraphIndex, 0, 5, "bold"), false);
+});
+
+test("updateParagraphText preserves line breaks within a paragraph", async () => {
+  const { createRequire } = await import("node:module");
+  const JSZip = createRequire(import.meta.url)("jszip");
+  const { PresentationEngine } = await loadPresentationEngineModule();
+  const input = await readDeck("features.pptx");
+  const engine = await PresentationEngine.load(toArrayBuffer(input));
+
+  await engine.updateParagraphText(0, 0, 0, "Line one\nLine two");
+
+  const exported = await engine.export();
+  const zip = await JSZip.loadAsync(exported);
+  const slideXml = await zip.files["ppt/slides/slide1.xml"].async("string");
+  assert.match(slideXml, /<a:br/);
+  assert.match(slideXml, /Line one/);
+  assert.match(slideXml, /Line two/);
+
+  const reloaded = await PresentationEngine.load(exported);
+  const svg = reloaded.renderSlide(0).svg;
+  assert.ok(svg.includes(">one<"));
+  assert.ok(svg.includes(">two<"));
+  assert.ok((svg.match(/data-ooxml-para-idx="0"/g) || []).length >= 2);
+});
+
+test("updateShapeTransform allows shapes outside the slide bounds", async () => {
+  const { createRequire } = await import("node:module");
+  const JSZip = createRequire(import.meta.url)("jszip");
+  const { PresentationEngine } = await loadPresentationEngineModule();
+  const input = await readDeck("features.pptx");
+  const engine = await PresentationEngine.load(toArrayBuffer(input));
+
+  await engine.updateShapeTransform(0, 0, {
+    x: -9000000,
+    y: 342900,
+    cx: 5943600,
+    cy: 685800,
+    rot: 0
+  });
+
+  const exported = await engine.export();
+  const zip = await JSZip.loadAsync(exported);
+  const slideXml = await zip.files["ppt/slides/slide1.xml"].async("string");
+  assert.match(slideXml, /x="-9000000"/);
+});
+
 test("slide add, reorder, and delete operations survive export", async () => {
   const { PresentationEngine } = await loadPresentationEngineModule();
   const input = await readDeck("simple-edit.pptx");
